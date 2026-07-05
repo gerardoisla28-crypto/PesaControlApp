@@ -1,0 +1,211 @@
+<UserControl x:Class="PesaControl.UI.Views.ControlsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="900"
+             Foreground="{StaticResource TextPrimaryBrush}">
+    <UserControl.Resources>
+        <Style x:Key="TrafficLightCircle" TargetType="Ellipse">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="Stroke" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="Fill" Value="{StaticResource SurfaceLightBrush}" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="0" Opacity="0" ShadowDepth="0" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TrafficLightGlow" TargetType="Ellipse" BasedOn="{StaticResource TrafficLightCircle}">
+            <Setter Property="Opacity" Value="0.15" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- TOP: Selector + Conectar -->
+        <Border Style="{StaticResource CardPanel}">
+            <StackPanel>
+                <TextBlock Text="Control de Acceso" Style="{StaticResource SectionTitle}" />
+                <WrapPanel>
+                    <ComboBox ItemsSource="{Binding BarrierVM.Barriers}"
+                              SelectedItem="{Binding BarrierVM.SelectedBarrier}"
+                              DisplayMemberPath="Name"
+                              Width="280"
+                              Margin="0,0,6,0" />
+                    <Button Content="Conectar" Command="{Binding BarrierVM.ConnectCommand}"
+                            Style="{StaticResource SuccessButton}"
+                            Margin="0,0,6,0" />
+                    <Button Content="Desconectar" Command="{Binding BarrierVM.DisconnectCommand}"
+                            Style="{StaticResource DangerButton}" />
+                </WrapPanel>
+                <TextBlock Text="{Binding BarrierVM.StatusMessage}"
+                           Style="{StaticResource StatusMessage}" />
+            </StackPanel>
+        </Border>
+
+        <!-- CENTER: Barrier buttons + Traffic light visual -->
+        <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="30">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- LEFT: Barrier controls -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="Barrera" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,30" />
+
+                    <Button Content="ABRIR" Command="{Binding BarrierVM.OpenCommand}"
+                            IsEnabled="{Binding BarrierVM.IsConnected}"
+                            Style="{StaticResource SuccessButton}"
+                            FontSize="22" FontWeight="Bold"
+                            Padding="60,28" Margin="0,0,0,20"
+                            HorizontalAlignment="Center" />
+
+                    <Button Content="CERRAR" Command="{Binding BarrierVM.CloseCommand}"
+                            IsEnabled="{Binding BarrierVM.IsConnected}"
+                            Style="{StaticResource DangerButton}"
+                            FontSize="22" FontWeight="Bold"
+                            Padding="60,28"
+                            HorizontalAlignment="Center" />
+
+                    <Button Content="Actualizar" Command="{Binding BarrierVM.RefreshStatusCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Center" Margin="0,20,0,0"
+                            IsEnabled="{Binding BarrierVM.IsConnected}" />
+                </StackPanel>
+
+                <!-- SEPARATOR -->
+                <GridSplitter Grid.Column="1" Width="3" Margin="40,0"
+                              Background="{StaticResource SurfaceLightBrush}"
+                              VerticalAlignment="Stretch"
+                              IsEnabled="False" />
+
+                <!-- RIGHT: Traffic light visual -->
+                <Border Grid.Column="2" CornerRadius="16" Padding="30"
+                        Background="{StaticResource SurfaceDarkBrush}"
+                        VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Width="160">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="SEMÁFORO" FontSize="14" FontWeight="Bold"
+                                   HorizontalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,25" />
+
+                        <!-- RED LIGHT -->
+                        <StackPanel HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <Ellipse Width="72" Height="72" StrokeThickness="3">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#3DF44336" />
+                                        <Setter Property="Stroke" Value="#66F44336" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="0" Opacity="0" ShadowDepth="0" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="False">
+                                                <Setter Property="Fill" Value="{StaticResource AccentRedBrush}" />
+                                                <Setter Property="Stroke" Value="{StaticResource AccentRedBrush}" />
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect BlurRadius="20" Opacity="0.8"
+                                                                          ShadowDepth="0" Color="#F44336" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="CERRADO" FontSize="11" FontWeight="Bold"
+                                       HorizontalAlignment="Center" Margin="0,8,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="False">
+                                                <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- GREEN LIGHT -->
+                        <StackPanel HorizontalAlignment="Center">
+                            <Ellipse Width="72" Height="72" StrokeThickness="3">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#1D4CAF50" />
+                                        <Setter Property="Stroke" Value="#664CAF50" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="0" Opacity="0" ShadowDepth="0" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource AccentGreenBrush}" />
+                                                <Setter Property="Stroke" Value="{StaticResource AccentGreenBrush}" />
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect BlurRadius="20" Opacity="0.8"
+                                                                          ShadowDepth="0" Color="#4CAF50" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="ABIERTO" FontSize="11" FontWeight="Bold"
+                                       HorizontalAlignment="Center" Margin="0,8,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Estado actual -->
+                        <Border CornerRadius="4" Padding="12,5" Margin="0,20,0,0"
+                                Background="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToGreenRedBrush}}">
+                            <TextBlock Text="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToOpenClosed}}"
+                                       HorizontalAlignment="Center" FontWeight="Bold"
+                                       Foreground="White" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- BOTTOM: Traffic light connection status -->
+        <TextBlock Grid.Row="2" Margin="0,8,0,0"
+                   Style="{StaticResource StatusMessage}">
+            <Run Text="Semáforo:" />
+            <Run Text="{Binding TrafficLightVM.CurrentColor}" />
+            <Run Text="·" />
+            <Run Text="{Binding TrafficLightVM.StatusMessage}" />
+        </TextBlock>
+    </Grid>
+</UserControl>

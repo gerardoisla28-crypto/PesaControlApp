@@ -1,0 +1,57 @@
+﻿<Window x:Class="PesaControl.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PesaControl Pro - Login"
+        Height="380" Width="420"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource SurfaceDarkBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True">
+    <Border CornerRadius="8" Background="{StaticResource SurfaceCardBrush}"
+            Margin="0" BorderThickness="1"
+            BorderBrush="{StaticResource SurfaceLightBrush}">
+        <Grid Margin="30,30,30,22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Logo -->
+            <StackPanel Margin="0,10,0,25" HorizontalAlignment="Center">
+                <TextBlock Text="⚖" FontSize="36" HorizontalAlignment="Center" />
+                <TextBlock Text="PESA CONTROL" FontSize="22" FontWeight="Bold"
+                           HorizontalAlignment="Center" Foreground="White" />
+                <TextBlock Text="Iniciar Sesión" FontSize="13"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,5,0,0" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Margin="0,0,0,15">
+                <TextBlock Text="Usuario" Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="12" Margin="0,0,0,4" />
+                <TextBox x:Name="txtUser" Height="38" FontSize="14" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Margin="0,0,0,20">
+                <TextBlock Text="Contraseña" Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="12" Margin="0,0,0,4" />
+                <PasswordBox x:Name="txtPass" Height="38" FontSize="14" />
+            </StackPanel>
+
+            <Button Content="Ingresar" Grid.Row="2" FontSize="15" FontWeight="Bold"
+                    Padding="15,9"
+                    Click="Login_Click"
+                    Style="{StaticResource PrimaryButton}" Margin="0,66,0,26" Grid.RowSpan="2" />
+
+            <TextBlock Grid.Row="4" Text="v1.0.0"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       FontSize="11" HorizontalAlignment="Center"
+                       Margin="0,20,0,0" />
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,58 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+.vs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Build
+*.nupkg
+*.log
+packages/
+
+# Application data
+**/pesacontrol.db
+**/pesacontrol.db-shm
+**/pesacontrol.db-wal
+**/Photos/
+**/Backups/
+
+# Temp
+[Pp]ublish/
+[Ll]ogs/
+*.tmp
+*.temp
+
+# Crash dumps / diagnostics
+*.dmp
+*.hdmp
+
+# Local config overrides (secrets, connection strings)
+appsettings*.local.*
+appsettings.*.local.*
+*.local.config
+
+# OCR models / downloaded assets
+**/inference/
+**/models/downloads/
+
+# Camera captures / video exports
+**/Captures/
+**/Snapshots/
+
+# Generated reports (PDF/Excel) from development runs
+**/Reports/Export/
+**/Exports/
+
+# NuGet cache / packages
+**/[Pp]ackages/

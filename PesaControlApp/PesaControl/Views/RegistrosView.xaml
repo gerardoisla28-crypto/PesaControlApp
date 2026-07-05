@@ -1,0 +1,275 @@
+<UserControl x:Class="PesaControl.UI.Views.RegistrosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:models="clr-namespace:PesaControl.Core.Models"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Foreground="{StaticResource TextPrimaryBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- FILTERS -->
+        <Border Style="{StaticResource CardPanel}">
+            <StackPanel>
+                <TextBlock Text="Historial de Pesajes" Style="{StaticResource SectionTitle}" />
+
+                <WrapPanel Margin="0,0,0,10">
+                    <StackPanel Margin="0,0,6,0">
+                        <TextBox Text="{Binding SearchPlate, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="160"
+                                 ToolTip="Buscar por patente" />
+                        <TextBlock Text="Patente" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,6,0">
+                        <TextBox Text="{Binding SearchTicket, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="120"
+                                 ToolTip="Buscar por ticket" />
+                        <TextBlock Text="Ticket" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,6,0">
+                        <DatePicker SelectedDate="{Binding FilterFrom}"
+                                    Width="130"
+                                    ToolTip="Desde" />
+                        <TextBlock Text="Desde" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,6,0">
+                        <DatePicker SelectedDate="{Binding FilterTo}"
+                                    Width="130"
+                                    ToolTip="Hasta" />
+                        <TextBlock Text="Hasta" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,6,0">
+                        <ComboBox ItemsSource="{Binding Statuses}"
+                                  SelectedItem="{Binding FilterStatus}"
+                                  Width="140"
+                                  ToolTip="Filtrar por estado">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource WeighingStatusConverter}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Text="Estado" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <Button Content="Buscar" Command="{Binding SearchCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,6,0" />
+                    <Button Content="Limpiar" Command="{Binding ClearFiltersCommand}"
+                            Style="{StaticResource WarningButton}"
+                            Margin="0,0,6,0" />
+                    <Button Content="Imprimir" Command="{Binding PrintTicketCommand}"
+                            Style="{StaticResource PrimaryButton}" />
+                </WrapPanel>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           Style="{StaticResource StatusMessage}" />
+            </StackPanel>
+        </Border>
+
+        <!-- RECORDS LIST -->
+        <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="4">
+            <Grid>
+                <ListView ItemsSource="{Binding Records}"
+                          SelectedItem="{Binding SelectedRecord}"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          Foreground="{StaticResource TextPrimaryBrush}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListViewItem">
+                                        <Border Background="{TemplateBinding Background}"
+                                                SnapsToDevicePixels="True">
+                                            <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                                  Columns="{TemplateBinding GridView.ColumnCollection}"
+                                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SidebarItemHoverBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SidebarItemHoverBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.Resources>
+                        <Style TargetType="GridViewColumnHeader">
+                            <Setter Property="Padding" Value="8,4,8,4" />
+                        </Style>
+                    </ListView.Resources>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="False">
+                            <GridViewColumn Header="Ticket" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding TicketNumber}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Fecha Entrada" Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding WeighInTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Fecha Salida" Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding WeighOutTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Patente" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding LicensePlate}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Producto" Width="160">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Product.Name}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Empresa" Width="180">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Company.Name}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Operador" Width="180">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding OperatorName}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Conductor" Width="180">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DriverName}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Peso Entrada" Width="140">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding GrossWeight, StringFormat={}{0:N3}}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Peso Salida" Width="130">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding TareWeight, StringFormat={}{0:N3}}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Peso Neto" Width="130">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding NetWeight, StringFormat={}{0:N3}}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   FontWeight="Bold" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Estado" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Status, Converter={StaticResource WeighingStatusConverter}}"
+                                                   HorizontalAlignment="Stretch"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Cámara" Width="80">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="📷"
+                                                Command="{Binding DataContext.ShowPhotosCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                FontSize="16"
+                                                ToolTip="Ver fotos del pesaje"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Cursor="Hand"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <TextBlock Text="Sin registros"
+                           Style="{StaticResource EmptyStateText}"
+                           Visibility="{Binding Records.Count, Converter={StaticResource EmptyToVis}}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

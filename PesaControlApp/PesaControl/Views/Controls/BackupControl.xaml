@@ -1,0 +1,136 @@
+<UserControl x:Class="PesaControl.UI.Views.Controls.BackupControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Foreground="{StaticResource TextPrimaryBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,15,0">
+
+            <TextBlock Text="Respaldo de Datos" Style="{StaticResource SectionTitle}" FontSize="20" />
+
+            <!-- Exportar -->
+            <Border Style="{StaticResource CardPanel}">
+                <StackPanel>
+                    <TextBlock Text="Exportar datos" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="Crea un archivo .pesabackup con todos los registros, configuraciones y fotos. Útil para migrar a una nueva versión de la aplicación o como respaldo de seguridad."
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,12" />
+
+                    <Button Content=" Exportar respaldo"
+                            Command="{Binding ExportCommand}"
+                            Padding="20,10"
+                            HorizontalAlignment="Left">
+                        <Button.Style>
+                            <Style BasedOn="{StaticResource SuccessButton}" TargetType="Button">
+                                <Setter Property="IsEnabled" Value="True" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                        <Setter Property="Opacity" Value="0.5" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Importar -->
+            <Border Style="{StaticResource CardPanel}">
+                <StackPanel>
+                    <TextBlock Text="Importar datos" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="Restaura datos desde un archivo .pesabackup. Se reemplazarán todos los datos actuales de la aplicación. Se recomienda exportar un respaldo antes de importar."
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,6" />
+
+                    <Border Background="{StaticResource SurfaceDarkBrush}"
+                            CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <TextBlock Text="⚠ Esta operación reemplazará todos los datos actuales"
+                                   Foreground="{StaticResource AccentOrangeBrush}"
+                                   FontWeight="Bold" />
+                    </Border>
+
+                    <Button Content=" Importar respaldo"
+                            Command="{Binding ImportCommand}"
+                            Padding="20,10"
+                            HorizontalAlignment="Left">
+                        <Button.Style>
+                            <Style BasedOn="{StaticResource DangerButton}" TargetType="Button">
+                                <Setter Property="IsEnabled" Value="True" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                        <Setter Property="Opacity" Value="0.5" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Progreso -->
+            <Border Style="{StaticResource CardPanel}"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="Progreso" Style="{StaticResource SectionTitle}" />
+                    <ProgressBar Value="{Binding ProgressValue}"
+                                 Height="20"
+                                 Foreground="{StaticResource AccentGreenBrush}"
+                                 Background="{StaticResource SurfaceLightBrush}"
+                                 BorderThickness="0"
+                                 Margin="0,0,0,6" />
+                    <TextBlock Text="{Binding ProgressText}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontStyle="Italic" />
+                </StackPanel>
+            </Border>
+
+            <!-- Estado -->
+            <TextBlock Text="{Binding StatusMessage}"
+                       Style="{StaticResource StatusMessage}" />
+
+            <!-- Respaldos recientes -->
+            <Border Style="{StaticResource CardPanel}">
+                <StackPanel>
+                    <TextBlock Text="Respaldos recientes" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="Los archivos .pesabackup se guardan automáticamente en la carpeta de respaldos de la aplicación."
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,10" />
+
+                    <ListBox ItemsSource="{Binding RecentBackups}"
+                             Background="{StaticResource SurfaceDarkBrush}"
+                             BorderThickness="0"
+                             Height="200">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding FileName}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="{Binding LastModifiedDisplay}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock Text=" — "
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding SizeDisplay}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextMutedBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

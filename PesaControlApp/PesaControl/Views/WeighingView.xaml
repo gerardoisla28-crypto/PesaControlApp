@@ -1,0 +1,249 @@
+<UserControl x:Class="PesaControl.UI.Views.WeighingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:behaviors="clr-namespace:PesaControl.UI.Behaviors"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Foreground="{StaticResource TextPrimaryBrush}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="320" />
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT: Weight display + controls -->
+        <Grid Margin="0,0,15,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Style="{StaticResource DisplayPanel}" Padding="15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{Binding WeightDisplay}"
+                                   FontFamily="Consolas"
+                                   FontSize="48"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{Binding IsStable, Converter={StaticResource BoolToGreenRedBrush}}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                            <Setter Property="Foreground" Value="#FF3333" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding LastReadingTime}"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Visibility="Collapsed" />
+                        <TextBlock Text="{Binding RawData}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Visibility="Collapsed" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+                        <TextBlock Text="{Binding ConnectionStatus}"
+                                   FontSize="13"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{Binding IsConnected, Converter={StaticResource ConnectedBrushConverter}}" />
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Right"
+                                   Margin="0,4,0,0" />
+                        <WrapPanel Margin="0,8,0,0" HorizontalAlignment="Right">
+                            <Button Content="Conectar" Command="{Binding ConnectCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Padding="10,5" Margin="0,0,4,0" />
+                            <Button Content="Desconectar" Command="{Binding DisconnectCommand}"
+                                    Style="{StaticResource DangerButton}"
+                                    Padding="10,5" Margin="0,0,4,0" />
+                            <Button Content="Tara" Command="{Binding TareCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Padding="10,5" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Style="{StaticResource CardPanel}" Padding="12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Nuevo Pesaje" Style="{StaticResource SectionTitle}"
+                               Grid.ColumnSpan="2" Margin="0,0,0,8" />
+
+                    <!-- Row 1: Patente + Producto -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,6,0">
+                        <Label Content="Patente" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
+                        <TextBox Text="{Binding LicensePlate}"
+                                 behaviors:TextBoxBehaviors.PlateCountry="{Binding PlateCountry}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0,0,0">
+                        <Label Content="Producto" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
+                        <ComboBox ItemsSource="{Binding Products}"
+                                  SelectedItem="{Binding SelectedProduct}"
+                                  DisplayMemberPath="Name"
+                                  MaxDropDownHeight="200" />
+                    </StackPanel>
+
+                    <!-- Row 2: País + Empresa -->
+                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,4,6,0">
+                        <Label Content="País" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
+                        <ComboBox ItemsSource="{Binding Countries}"
+                                  SelectedItem="{Binding PlateCountry}"
+                                  MaxDropDownHeight="200" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,4,0,0">
+                        <Label Content="Empresa" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
+                        <ComboBox ItemsSource="{Binding Companies}"
+                                  SelectedItem="{Binding SelectedCompany}"
+                                  DisplayMemberPath="Name"
+                                  MaxDropDownHeight="200" />
+                    </StackPanel>
+
+                    <!-- Row 3: Operador + Conductor -->
+                    <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,4,6,0">
+                        <Label Content="Operador" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
+                        <ComboBox ItemsSource="{Binding OperatorsView}"
+                                  Text="{Binding OperatorName, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEditable="True"
+                                  DisplayMemberPath="FullName"
+                                  IsTextSearchEnabled="False"
+                                  StaysOpenOnEdit="True"
+                                  IsDropDownOpen="{Binding IsOperatorDropdownOpen}"
+                                  MaxDropDownHeight="200" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="3" Grid.Column="1" Margin="6,4,0,0">
+                        <Label Content="Conductor" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
+                        <ComboBox ItemsSource="{Binding DriversView}"
+                                  Text="{Binding DriverName, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEditable="True"
+                                  DisplayMemberPath="FullName"
+                                  IsTextSearchEnabled="False"
+                                  StaysOpenOnEdit="True"
+                                  IsDropDownOpen="{Binding IsDriverDropdownOpen}"
+                                  MaxDropDownHeight="200" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Bottom: action buttons + active area -->
+            <Grid Grid.Row="2" Margin="0,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <WrapPanel Margin="0,0,0,8">
+                    <Button Content="Pesar (Entrada)"
+                            Command="{Binding StartWeighInCommand}"
+                            IsEnabled="{Binding IsConnected}"
+                            Style="{StaticResource SuccessButton}"
+                            Margin="0,0,6,0" />
+                    <Button Content="Finalizar (Salida)"
+                            Command="{Binding CompleteWeighOutCommand}"
+                            IsEnabled="{Binding IsConnected}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,6,0" />
+                    <Button Content="Cancelar"
+                            Command="{Binding CancelWeighingCommand}"
+                            Style="{StaticResource DangerButton}" />
+                </WrapPanel>
+
+                <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="Pesajes del Día" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+                            <ListBox ItemsSource="{Binding ActiveWeighings}"
+                                     SelectedItem="{Binding SelectedRecord}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Height="Auto"
+                                     MaxHeight="300">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource SurfaceMidBrush}"
+                                                CornerRadius="4" Padding="8"
+                                                Margin="0,0,0,4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding TicketNumber}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                                           Margin="0,0,12,0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding LicensePlate}"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding GrossWeight, StringFormat='E: {0:F3} kg'}"
+                                                           Foreground="{StaticResource TextMutedBrush}"
+                                                           FontSize="11"
+                                                           Margin="8,0,8,0" />
+                                                <TextBlock Grid.Column="3"
+                                                           Text="{Binding TareWeight, StringFormat='S: {0:F3} kg'}"
+                                                           Foreground="{StaticResource TextMutedBrush}"
+                                                           FontSize="11"
+                                                           Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="4"
+                                                           Foreground="{StaticResource TextMutedBrush}">
+                                                    <Run Text="{Binding WeighInTime, StringFormat='{}{0:HH:mm}'}" />
+                                                    <Run Text="hs" />
+                                                </TextBlock>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1">
+                            <Button Content="Imprimir Ticket"
+                                    Command="{Binding PrintPreviewCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    HorizontalAlignment="Stretch"
+                                    Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- SEPARATOR - hidden since we merged active list into left -->
+        <GridSplitter Grid.Column="1" Width="0" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,151 @@
+<UserControl x:Class="PesaControl.UI.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:views="clr-namespace:PesaControl.UI.Views.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Foreground="{StaticResource TextPrimaryBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Configuración del Sistema" Style="{StaticResource SectionTitle}" FontSize="20" Margin="0,0,0,8" />
+
+        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+            <TabItem Header="Báscula">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,8,15,0">
+
+                        <Border Style="{StaticResource CardPanel}">
+                            <StackPanel>
+                                <TextBlock Text="Comunicación — Báscula" Style="{StaticResource SectionTitle}" />
+
+                                <Label Content="Protocolo" Style="{StaticResource FormLabel}" />
+                                <ComboBox ItemsSource="{Binding ProtocolNames}"
+                                          SelectedItem="{Binding SelectedProtocolName}"
+                                          Margin="0,0,0,8" />
+
+                                <Border Background="{StaticResource SurfaceDarkBrush}"
+                                        CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="Parámetros Serial" FontWeight="Bold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                                <Label Content="Puerto" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding SerialPort}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="3,0">
+                                                <Label Content="Baudrate" Style="{StaticResource FormLabel}" />
+                                                <ComboBox ItemsSource="{Binding BaudRates}"
+                                                          SelectedItem="{Binding SerialBaudRate}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Margin="3,0">
+                                                <Label Content="Paridad" Style="{StaticResource FormLabel}" />
+                                                <ComboBox ItemsSource="{Binding ParityOptions}"
+                                                          SelectedItem="{Binding SerialParity}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="3" Margin="3,0">
+                                                <Label Content="Data Bits" Style="{StaticResource FormLabel}" />
+                                                <ComboBox ItemsSource="{Binding DataBitsOptions}"
+                                                          SelectedItem="{Binding SerialDataBits}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="4" Margin="6,0,0,0">
+                                                <Label Content="Stop Bits" Style="{StaticResource FormLabel}" />
+<ComboBox ItemsSource="{Binding StopBitsOptions}"
+          SelectedItem="{Binding SerialStopBits}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="{StaticResource SurfaceDarkBrush}"
+                                        CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="Parámetros Modbus TCP" FontWeight="Bold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                                <Label Content="Dirección IP" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding IpAddress}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="3,0">
+                                                <Label Content="Puerto TCP" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding TcpPort}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                                <Label Content="Slave ID" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding ModbusSlaveId}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="{StaticResource SurfaceDarkBrush}"
+                                        CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Parámetros Modbus Generales" FontWeight="Bold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                                <Label Content="Slave ID" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding ModbusSlaveId}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="3,0">
+                                                <Label Content="Registro" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding ModbusRegister}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                                <Label Content="Intervalo (ms)" Style="{StaticResource FormLabel}" />
+                                                <TextBox Text="{Binding ReadIntervalMs}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <WrapPanel Margin="0,0,0,12">
+                            <Button Content="Guardar Configuración" Command="{Binding SaveConfigCommand}"
+                                    Style="{StaticResource SuccessButton}"
+                                    Margin="0,0,8,0" />
+                            <Button Content="Probar Conexión" Command="{Binding TestConnectionCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Margin="0,0,8,0" />
+                            <Button Content="Recargar" Command="{Binding LoadConfigCommand}"
+                                    Style="{StaticResource WarningButton}" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Style="{StaticResource StatusMessage}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Respaldo">
+                <views:BackupControl DataContext="{Binding BackupVM}" />
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>
