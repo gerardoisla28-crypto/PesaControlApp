@@ -11,4 +11,5 @@ public interface IWeighingRepository : IRepository<WeighingRecord>
     Task<List<WeighingRecord>> GetTodayWeighingsAsync();
     Task<WeighingRecord?> GetActiveWeighingByPlateAsync(string plate);
     Task<string> GetNextTicketNumberAsync();
+    Task<PagedResult<WeighingRecord>> GetPagedAsync(int page, int pageSize, string? plate, string? ticket, DateTime? from, DateTime? to, WeighingStatus? status, int? productId, int? companyId);
 }

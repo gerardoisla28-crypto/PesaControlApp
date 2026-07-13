@@ -81,4 +81,54 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
             .Include(w => w.Product)
             .Include(w => w.Company)
             .FirstOrDefaultAsync(w => w.Id == id);
+
+    public async Task<PagedResult<WeighingRecord>> GetPagedAsync(
+        int page, int pageSize,
+        string? plate, string? ticket,
+        DateTime? from, DateTime? to,
+        WeighingStatus? status,
+        int? productId, int? companyId)
+    {
+        var query = _dbSet
+            .Include(w => w.Product)
+            .Include(w => w.Company)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(plate))
+            query = query.Where(w => w.LicensePlate.Contains(plate.Trim().ToUpper()));
+
+        if (!string.IsNullOrWhiteSpace(ticket))
+            query = query.Where(w => w.TicketNumber.Contains(ticket.Trim()));
+
+        if (from.HasValue)
+            query = query.Where(w => w.WeighInTime >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(w => w.WeighInTime <= to.Value.AddDays(1));
+
+        if (status.HasValue)
+            query = query.Where(w => w.Status == status.Value);
+
+        if (productId.HasValue)
+            query = query.Where(w => w.ProductId == productId.Value);
+
+        if (companyId.HasValue)
+            query = query.Where(w => w.CompanyId == companyId.Value);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(w => w.WeighInTime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResult<WeighingRecord>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
 }

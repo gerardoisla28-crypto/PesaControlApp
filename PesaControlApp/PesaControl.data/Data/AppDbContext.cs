@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<PlateRecord> PlateRecords => Set<PlateRecord>();
     public DbSet<Operator> Operators => Set<Operator>();
     public DbSet<Driver> Drivers => Set<Driver>();
+    public DbSet<ScaleConfig> ScaleConfigs => Set<ScaleConfig>();
 
     private readonly string _dbPath;
 
@@ -47,6 +48,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Notes).HasMaxLength(500);
             entity.Property(e => e.PhotoPath).HasMaxLength(500);
             entity.Property(e => e.PhotoPathExit).HasMaxLength(500);
+            entity.Property(e => e.EntryScaleName).HasMaxLength(100);
+            entity.Property(e => e.ExitScaleName).HasMaxLength(100);
             entity.Property(e => e.GrossWeight).HasColumnType("decimal(18,3)");
             entity.Property(e => e.TareWeight).HasColumnType("decimal(18,3)");
             entity.Property(e => e.NetWeight).HasColumnType("decimal(18,3)");
@@ -163,6 +166,16 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Timestamp);
             entity.HasOne(e => e.Camera).WithMany().HasForeignKey(e => e.CameraConfigId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(e => e.WeighingRecord).WithMany().HasForeignKey(e => e.WeighingRecordId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ScaleConfig>(entity =>
+        {
+            entity.ToTable("ScaleConfigs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.PortName).HasMaxLength(20);
+            entity.Property(e => e.IpAddress).HasMaxLength(50);
+            entity.Property(e => e.ProtocolType).HasConversion<string>().HasMaxLength(15);
         });
     }
 }

@@ -32,28 +32,37 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- TOP: Selector + Conectar -->
+        <!-- TOP: Selector + Conectar (unificado) -->
         <Border Style="{StaticResource CardPanel}">
             <StackPanel>
                 <TextBlock Text="Control de Acceso" Style="{StaticResource SectionTitle}" />
                 <WrapPanel>
-                    <ComboBox ItemsSource="{Binding BarrierVM.Barriers}"
-                              SelectedItem="{Binding BarrierVM.SelectedBarrier}"
+                    <ComboBox ItemsSource="{Binding Devices}"
+                              SelectedItem="{Binding SelectedDevice}"
                               DisplayMemberPath="Name"
-                              Width="280"
-                              Margin="0,0,6,0" />
-                    <Button Content="Conectar" Command="{Binding BarrierVM.ConnectCommand}"
+                              Width="240"
+                              Margin="0,0,4,0" />
+                    <Button Content="+ Agregar" Command="{Binding AddDeviceCommand}"
+                            Style="{StaticResource PrimaryButton}" Height="24" FontSize="13"
+                            Margin="0,0,4,0" Padding="6,0" />
+                    <Button Content="✎ Editar" Command="{Binding EditDeviceCommand}"
+                            Style="{StaticResource WarningButton}" Height="24" FontSize="13"
+                            Margin="0,0,4,0" Padding="6,0" />
+                    <Button Content="✕ Eliminar" Command="{Binding DeleteDeviceCommand}"
+                            Style="{StaticResource DangerButton}" Height="24" FontSize="13"
+                            Margin="0,0,6,0" Padding="6,0" />
+                    <Button Content="Conectar" Command="{Binding ConnectCommand}"
                             Style="{StaticResource SuccessButton}"
                             Margin="0,0,6,0" />
-                    <Button Content="Desconectar" Command="{Binding BarrierVM.DisconnectCommand}"
+                    <Button Content="Desconectar" Command="{Binding DisconnectCommand}"
                             Style="{StaticResource DangerButton}" />
                 </WrapPanel>
-                <TextBlock Text="{Binding BarrierVM.StatusMessage}"
+                <TextBlock Text="{Binding StatusMessage}"
                            Style="{StaticResource StatusMessage}" />
             </StackPanel>
         </Border>
 
-        <!-- CENTER: Barrier buttons + Traffic light visual -->
+        <!-- CENTER: Barrier buttons + Traffic light visual (igual que antes) -->
         <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="30">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -199,13 +208,53 @@
             </Grid>
         </Border>
 
-        <!-- BOTTOM: Traffic light connection status -->
-        <TextBlock Grid.Row="2" Margin="0,8,0,0"
-                   Style="{StaticResource StatusMessage}">
-            <Run Text="Semáforo:" />
+        <!-- BOTTOM: Connected status -->
+        <TextBlock Grid.Row="2" Margin="0,8,0,0" Style="{StaticResource StatusMessage}"
+                   VerticalAlignment="Center">
+            <Run Text="Barrera: " />
+            <Run Text="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToOpenClosed}}" />
+            <Run Text=" · " />
+            <Run Text="Semáforo: " />
             <Run Text="{Binding TrafficLightVM.CurrentColor}" />
-            <Run Text="·" />
-            <Run Text="{Binding TrafficLightVM.StatusMessage}" />
+            <Run Text=" · " />
+            <Run Text="{Binding StatusMessage}" FontWeight="Bold" />
         </TextBlock>
+
+        <!-- ── Device editor overlay (unificado) ── -->
+        <Grid Visibility="{Binding IsDeviceEditorOpen, Converter={StaticResource BoolToVisibilityConverter}}"
+              Background="#80000000" Panel.ZIndex="100" Grid.RowSpan="3">
+            <Border Style="{StaticResource CardPanel}" Width="420"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Configurar Dispositivo Arduino"
+                               Style="{StaticResource SectionTitle}" FontSize="18" Margin="0,0,0,12" />
+
+                    <Label Content="Nombre del dispositivo" Style="{StaticResource FormLabel}" />
+                    <TextBox Text="{Binding EditingName}" Margin="0,0,0,8" />
+
+                    <Label Content="Puerto COM" Style="{StaticResource FormLabel}" />
+                    <ComboBox ItemsSource="{Binding AvailablePorts}"
+                              SelectedItem="{Binding EditingPort}"
+                              Margin="0,0,0,8" />
+
+                    <Label Content="BaudRate" Style="{StaticResource FormLabel}" />
+                    <ComboBox ItemsSource="{Binding BaudRates}"
+                              SelectedItem="{Binding EditingBaudRate}"
+                              Margin="0,0,0,8" />
+
+                    <TextBlock Text="Este dispositivo controlará tanto la barrera como el semáforo a través de un único puerto serie."
+                               TextWrapping="Wrap" FontSize="11"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="0,0,0,12" />
+
+                    <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <Button Content="Guardar" Command="{Binding SaveDeviceCommand}"
+                                Style="{StaticResource SuccessButton}" Margin="0,0,8,0" />
+                        <Button Content="Cancelar" Command="{Binding CancelDeviceEditorCommand}"
+                                Style="{StaticResource DangerButton}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

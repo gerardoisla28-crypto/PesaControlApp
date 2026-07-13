@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.EntityFrameworkCore;
 using PesaControl.Core.Models;
 using PesaControl.Data.Data;
 using PesaControl.Data.Repositories;
@@ -24,11 +23,23 @@ public partial class RegistrosViewModel : ObservableObject
     [ObservableProperty] private DateTime? _filterFrom;
     [ObservableProperty] private DateTime? _filterTo;
     [ObservableProperty] private WeighingStatus? _filterStatus;
+    [ObservableProperty] private Product? _filterProduct;
+    [ObservableProperty] private Company? _filterCompany;
     [ObservableProperty] private WeighingRecord? _selectedRecord;
     [ObservableProperty] private string _statusMessage = "Listo";
 
+    [ObservableProperty] private int _currentPage = 1;
+    [ObservableProperty] private int _totalPages = 1;
+    [ObservableProperty] private int _pageSize = 20;
+    [ObservableProperty] private int _totalRecords;
+    [ObservableProperty] private bool _hasPreviousPage;
+    [ObservableProperty] private bool _hasNextPage;
+    [ObservableProperty] private string _pageInfo = "";
+
     public ObservableCollection<WeighingRecord> Records { get; } = new();
     public ObservableCollection<WeighingStatus> Statuses { get; } = new(Enum.GetValues<WeighingStatus>());
+    public ObservableCollection<Product> Products { get; } = new();
+    public ObservableCollection<Company> Companies { get; } = new();
 
     public RegistrosViewModel(DatabaseService dbService)
     {
@@ -50,41 +61,66 @@ public partial class RegistrosViewModel : ObservableObject
         try
         {
             StatusMessage = "Buscando...";
-
-            var query = _weighingRepo.GetAllAsync();
-
-            var all = await query;
-
-            var filtered = all.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(SearchPlate))
-                filtered = filtered.Where(w => w.LicensePlate.Contains(SearchPlate.Trim().ToUpper()));
-
-            if (!string.IsNullOrWhiteSpace(SearchTicket))
-                filtered = filtered.Where(w => w.TicketNumber.Contains(SearchTicket.Trim()));
-
-            if (FilterFrom.HasValue)
-                filtered = filtered.Where(w => w.WeighInTime >= FilterFrom.Value);
-
-            if (FilterTo.HasValue)
-                filtered = filtered.Where(w => w.WeighInTime <= FilterTo.Value.AddDays(1));
-
-            if (FilterStatus.HasValue)
-                filtered = filtered.Where(w => w.Status == FilterStatus.Value);
-
-            var result = filtered.OrderByDescending(w => w.WeighInTime).ToList();
-
-            App.Current.Dispatcher.Invoke(() =>
-            {
-                Records.Clear();
-                foreach (var r in result) Records.Add(r);
-                StatusMessage = $"{result.Count} registro(s) encontrado(s)";
-            });
+            CurrentPage = 1;
+            await FetchPageAsync();
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private async Task GoToPageAsync(object? pageObj)
+    {
+        int page = pageObj switch
+        {
+            int i => i,
+            string s when int.TryParse(s, out var p) => p,
+            _ => 1
+        };
+        if (page < 1 || page > TotalPages) return;
+        CurrentPage = page;
+        await FetchPageAsync();
+    }
+
+    [RelayCommand]
+    private async Task NextPageAsync()
+    {
+        if (!HasNextPage) return;
+        CurrentPage++;
+        await FetchPageAsync();
+    }
+
+    [RelayCommand]
+    private async Task PreviousPageAsync()
+    {
+        if (!HasPreviousPage) return;
+        CurrentPage--;
+        await FetchPageAsync();
+    }
+
+    private async Task FetchPageAsync()
+    {
+        var result = await _weighingRepo.GetPagedAsync(
+            CurrentPage, PageSize,
+            string.IsNullOrWhiteSpace(SearchPlate) ? null : SearchPlate,
+            string.IsNullOrWhiteSpace(SearchTicket) ? null : SearchTicket,
+            FilterFrom, FilterTo, FilterStatus,
+            FilterProduct?.Id, FilterCompany?.Id);
+
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            Records.Clear();
+            foreach (var r in result.Items) Records.Add(r);
+
+            TotalRecords = result.TotalCount;
+            TotalPages = result.TotalPages;
+            HasPreviousPage = CurrentPage > 1;
+            HasNextPage = CurrentPage < TotalPages;
+            PageInfo = $"Pág {CurrentPage} de {TotalPages} ({TotalRecords} registros)";
+            StatusMessage = $"{TotalRecords} registro(s) encontrado(s)";
+        });
     }
 
     [RelayCommand]
@@ -95,6 +131,8 @@ public partial class RegistrosViewModel : ObservableObject
         FilterFrom = null;
         FilterTo = null;
         FilterStatus = null;
+        FilterProduct = null;
+        FilterCompany = null;
         await SearchAsync();
     }
 
@@ -151,8 +189,35 @@ public partial class RegistrosViewModel : ObservableObject
         dialog.ShowDialog();
     }
 
+    [RelayCommand]
+    private void ShowDetail(WeighingRecord? record)
+    {
+        if (record == null) return;
+
+        var ctx = _dbService.CreateContext();
+        var fullRecord = new WeighingRepository(ctx).GetByIdAsync(record.Id).GetAwaiter().GetResult();
+        if (fullRecord == null) return;
+
+        var dialog = new RegistroDetailPopup(fullRecord);
+        dialog.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+        dialog.ShowDialog();
+    }
+
     private async Task LoadInitialAsync()
     {
         await SearchAsync();
+
+        using var ctx = _dbService.CreateContext();
+        var products = await new Repository<Product>(ctx).GetAllAsync();
+        var companies = await new Repository<Company>(ctx).GetAllAsync();
+
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            Products.Clear();
+            foreach (var p in products.OrderBy(x => x.Name)) Products.Add(p);
+
+            Companies.Clear();
+            foreach (var c in companies.OrderBy(x => x.Name)) Companies.Add(c);
+        });
     }
 }

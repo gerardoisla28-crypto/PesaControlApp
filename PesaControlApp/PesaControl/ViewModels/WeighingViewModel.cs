@@ -1,12 +1,12 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using System.IO;
 using PesaControl.Core.Models;
 using PesaControl.Core.Services;
 using PesaControl.Data.Data;
@@ -17,42 +17,192 @@ namespace PesaControl.UI.ViewModels;
 
 public partial class WeighingViewModel : ObservableObject
 {
-    private readonly WeighingService _weighingService;
-    private readonly IWeighingRepository _weighingRepo;
-    private readonly DatabaseService _dbService;
-    private readonly IRepository<Product> _productRepo;
-    private readonly IRepository<Company> _companyRepo;
-    private readonly IRepository<Operator> _operatorRepo;
-    private readonly IRepository<Driver> _driverRepo;
+    private readonly ScaleManager _scaleManager;
+    private readonly IWeighingDataService _dataService;
+    private readonly DatabaseService? _dbService;
     private ICameraService? _cameraService;
 
     private WeighingRecord? _currentRecord;
     private WeighingRecord? _lastCompletedRecord;
-    private CommunicationConfig _currentConfig = new();
 
-    public WeighingViewModel(WeighingService weighingService, DatabaseService dbService, ICameraService? cameraService = null)
+    public WeighingViewModel(ScaleManager scaleManager, IWeighingDataService dataService, DatabaseService? dbService = null)
     {
-        _weighingService = weighingService;
+        _scaleManager = scaleManager;
+        _dataService = dataService;
         _dbService = dbService;
-        var ctx = _dbService.CreateContext();
-        _weighingRepo = new WeighingRepository(ctx);
-        _productRepo = new Repository<Product>(ctx);
-        _companyRepo = new Repository<Company>(ctx);
-        _operatorRepo = new Repository<Operator>(ctx);
-        _driverRepo = new Repository<Driver>(ctx);
-        _cameraService = cameraService;
 
         OperatorsView = CollectionViewSource.GetDefaultView(AllOperators);
         OperatorsView.Filter = FilterOperator;
         DriversView = CollectionViewSource.GetDefaultView(AllDrivers);
         DriversView.Filter = FilterDriver;
 
-        WireEvents();
+        WireScaleEvents();
         _ = LoadCatalogsAsync();
         _ = LoadActiveWeighingsAsync();
         _ = LoadOperatorsAsync();
         _ = LoadDriversAsync();
+        _ = InitializeScalesAsync();
     }
+
+    // ── Scale displays ─────────────────────────────────────
+
+    public ObservableCollection<ScaleDisplay> ScaleDisplays { get; } = [];
+    public ObservableCollection<string> AvailableScaleNames { get; } = [];
+    public bool IsMultiScale => ScaleDisplays.Count > 1;
+
+    private async Task InitializeScalesAsync()
+    {
+        foreach (var scale in _scaleManager.Scales)
+        {
+            var display = new ScaleDisplay(scale.Config.Id, scale.Name)
+            {
+                Weight = scale.CurrentWeight,
+                IsStable = scale.IsStable,
+                IsConnected = scale.IsConnected,
+                StatusText = scale.IsConnected ? "Conectado" : "Desconectado"
+            };
+            ScaleDisplays.Add(display);
+            AvailableScaleNames.Add(scale.Name);
+        }
+
+        if (AvailableScaleNames.Count > 0)
+        {
+            EntryScaleName = AvailableScaleNames[0];
+            ExitScaleName = AvailableScaleNames[0];
+        }
+        if (AvailableScaleNames.Count > 1)
+        {
+            ExitScaleName = AvailableScaleNames[1];
+        }
+
+        var entryScale = ScaleDisplays.FirstOrDefault(d => d.Name == EntryScaleName);
+        if (entryScale != null)
+            EntryWeightText = $"{entryScale.Weight:F1} kg";
+
+        var exitScale = ScaleDisplays.FirstOrDefault(d => d.Name == ExitScaleName);
+        if (exitScale != null)
+            ExitWeightText = $"{exitScale.Weight:F1} kg";
+
+        OnPropertyChanged(nameof(IsMultiScale));
+    }
+
+    public void RefreshScaleNames()
+    {
+        foreach (var scale in _scaleManager.Scales)
+        {
+            var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
+            if (display != null)
+                display.Name = scale.Config.Name;
+        }
+        AvailableScaleNames.Clear();
+        foreach (var s in _scaleManager.Scales)
+            AvailableScaleNames.Add(s.Name);
+    }
+
+    // ── Captured weights (solo lectura, se llenan al pesar) ──
+
+    [ObservableProperty] private string _entryWeightText = "0.0 kg";
+    [ObservableProperty] private string _exitWeightText = "0.0 kg";
+
+    private bool _exitCaptured;
+
+    // ── Scale selectors ────────────────────────────────────
+
+    [ObservableProperty] private string _entryScaleName = "";
+    [ObservableProperty] private string _exitScaleName = "";
+
+    // ── Status display ─────────────────────────────────────
+
+    [ObservableProperty] private string _weightDisplay = "0.0kg";
+    [ObservableProperty] private string _connectionStatus = "Desconectado";
+    [ObservableProperty] private bool _isConnected;
+    [ObservableProperty] private bool _isStable;
+    [ObservableProperty] private string _statusMessage = "Listo";
+    [ObservableProperty] private bool _isWeighingIn;
+
+    // ── Scale events ──────────────────────────────────────
+
+    private void WireScaleEvents()
+    {
+        foreach (var scale in _scaleManager.Scales)
+        {
+            var svc = scale.Service;
+            svc.WeightUpdated += (_, w) => OnScaleWeightUpdated(scale);
+            svc.StabilityChanged += (_, stable) => OnScaleStabilityChanged(scale, stable);
+            svc.ConnectionChanged += (_, connected) => OnScaleConnectionChanged(scale, connected);
+            svc.ErrorOccurred += (_, err) => OnScaleError(scale, err);
+        }
+
+        _scaleManager.ScaleAdded += (_, scale) =>
+        {
+            var svc = scale.Service;
+            svc.WeightUpdated += (_, w) => OnScaleWeightUpdated(scale);
+            svc.StabilityChanged += (_, stable) => OnScaleStabilityChanged(scale, stable);
+            svc.ConnectionChanged += (_, connected) => OnScaleConnectionChanged(scale, connected);
+            svc.ErrorOccurred += (_, err) => OnScaleError(scale, err);
+        };
+    }
+
+    private void OnScaleWeightUpdated(ScaleInstance scale)
+    {
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
+            if (display != null)
+                display.Weight = scale.CurrentWeight;
+
+            WeightDisplay = $"{scale.CurrentWeight:F1}kg";
+            IsReading = true;
+            LastReadingTime = DateTime.Now.ToString("HH:mm:ss.fff");
+            IsConnected = _scaleManager.Scales.Any(s => s.IsConnected);
+            ConnectionStatus = IsConnected ? "Conectado" : "Desconectado";
+
+            if (!IsWeighingIn && scale.Name == EntryScaleName)
+                EntryWeightText = $"{scale.CurrentWeight:F1} kg";
+
+            if (!_exitCaptured && scale.Name == ExitScaleName)
+                ExitWeightText = $"{scale.CurrentWeight:F1} kg";
+        });
+    }
+
+    private void OnScaleStabilityChanged(ScaleInstance scale, bool stable)
+    {
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
+            if (display != null)
+                display.IsStable = stable;
+            IsStable = stable;
+        });
+    }
+
+    private void OnScaleConnectionChanged(ScaleInstance scale, bool connected)
+    {
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
+            if (display != null)
+            {
+                display.IsConnected = connected;
+                display.StatusText = connected ? "Conectado" : "Desconectado";
+            }
+
+            IsConnected = _scaleManager.Scales.Any(s => s.IsConnected);
+            ConnectionStatus = IsConnected ? "Conectado" : "Desconectado";
+            if (!connected)
+                StatusMessage = $"Báscula {scale.Name} desconectada";
+        });
+    }
+
+    private void OnScaleError(ScaleInstance scale, string error)
+    {
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            StatusMessage = $"{scale.Name}: {error}";
+        });
+    }
+
+    // ── Operator / Driver dropdowns ───────────────────────
 
     public ObservableCollection<Operator> AllOperators { get; } = [];
     public ICollectionView OperatorsView { get; }
@@ -61,6 +211,8 @@ public partial class WeighingViewModel : ObservableObject
 
     [ObservableProperty] private bool _isOperatorDropdownOpen;
     [ObservableProperty] private bool _isDriverDropdownOpen;
+    [ObservableProperty] private string _operatorName = "";
+    [ObservableProperty] private string _driverName = "";
 
     partial void OnSelectedCompanyChanged(Company? value)
     {
@@ -104,52 +256,52 @@ public partial class WeighingViewModel : ObservableObject
         return true;
     }
 
-    private async Task LoadOperatorsAsync()
-    {
-        var items = await _operatorRepo.GetAllAsync();
-        App.Current.Dispatcher.Invoke(() =>
-        {
-            AllOperators.Clear();
-            foreach (var o in items) AllOperators.Add(o);
-            OperatorsView.Refresh();
-        });
-    }
+    // ── Form fields ────────────────────────────────────────
 
-    private async Task LoadDriversAsync()
-    {
-        var items = await _driverRepo.GetAllAsync();
-        App.Current.Dispatcher.Invoke(() =>
-        {
-            AllDrivers.Clear();
-            foreach (var d in items) AllDrivers.Add(d);
-            DriversView.Refresh();
-        });
-    }
-
-    [ObservableProperty] private string _weightDisplay = "0.0kg";
-    [ObservableProperty] private bool _isStable;
-    [ObservableProperty] private string _connectionStatus = "Desconectado";
-    [ObservableProperty] private bool _isConnected;
-    [ObservableProperty] private string _statusMessage = "Listo";
-    [ObservableProperty] private string _lastReadingTime = "";
-    [ObservableProperty] private bool _isReading;
-    [ObservableProperty] private string _rawData = "";
     [ObservableProperty] private string _licensePlate = "";
-    [ObservableProperty] private string _operatorName = "";
-    [ObservableProperty] private string _driverName = "";
     [ObservableProperty] private string _plateCountry = "CL";
     [ObservableProperty] private Product? _selectedProduct;
     [ObservableProperty] private Company? _selectedCompany;
     [ObservableProperty] private WeighingRecord? _selectedRecord;
-    [ObservableProperty] private bool _isWeighingIn;
 
-    public ObservableCollection<Product> Products { get; } = new();
-    public ObservableCollection<Company> Companies { get; } = new();
-    public ObservableCollection<WeighingRecord> ActiveWeighings { get; } = new();
-    public ObservableCollection<string> Countries { get; } = new()
+    partial void OnSelectedRecordChanged(WeighingRecord? value)
     {
+        if (value == null) return;
+
+        LicensePlate = value.LicensePlate;
+        PlateCountry = value.PlateCountry;
+        OperatorName = value.OperatorName;
+        DriverName = value.DriverName;
+        SelectedProduct = Products.FirstOrDefault(p => p.Id == value.ProductId);
+        SelectedCompany = Companies.FirstOrDefault(c => c.Id == value.CompanyId);
+        _currentRecord = value.Status == WeighingStatus.WeighingIn ? value : null;
+        IsWeighingIn = value.Status == WeighingStatus.WeighingIn;
+        EntryWeightText = $"{value.GrossWeight:F1} kg";
+        if (value.TareWeight > 0)
+            ExitWeightText = $"{value.TareWeight:F1} kg";
+        StatusMessage = $"Cargado: {value.TicketNumber} - {value.LicensePlate}";
+    }
+
+    public ObservableCollection<Product> Products { get; } = [];
+    public ObservableCollection<Company> Companies { get; } = [];
+    public ObservableCollection<WeighingRecord> ActiveWeighings { get; } = [];
+    public ObservableCollection<string> Countries { get; } =
+    [
         "CL", "AR", "BR", "PY", "UY", "BO", "PE", "CO", "MX", "EC"
-    };
+    ];
+
+    // ── Sidebar VMs (set externally by DashboardWindow) ────
+
+    public CameraViewModel? CameraVM { get; set; }
+    public ControlsViewModel? ControlsVM { get; set; }
+
+    // ── Display helpers ────────────────────────────────────
+
+    [ObservableProperty] private string _lastReadingTime = "";
+    [ObservableProperty] private bool _isReading;
+    [ObservableProperty] private string _rawData = "";
+
+    // ── Connect / Disconnect ───────────────────────────────
 
     [RelayCommand]
     private async Task ConnectAsync()
@@ -157,59 +309,22 @@ public partial class WeighingViewModel : ObservableObject
         StatusMessage = "Conectando...";
         try
         {
-            var ctx = _dbService.CreateContext();
-            _currentConfig = await LoadCommunicationConfigAsync(new Repository<SystemConfig>(ctx));
+            await _scaleManager.ConnectAllAsync();
 
-            IWeighingProtocol protocol = _currentConfig.Type switch
-            {
-                ProtocolType.ModbusTcp => new ModbusTcpProtocol(),
-                ProtocolType.ModbusRtu => new ModbusRtuProtocol(),
-                ProtocolType.Sensoc => new SensocProtocol(),
-                _ => new SerialProtocol()
-            };
+            var connected = _scaleManager.Scales.Count(s => s.IsConnected);
+            var total = _scaleManager.Scales.Count;
 
-            await _weighingService.SetProtocol(protocol, _currentConfig);
-            await _weighingService.ConnectAsync();
-            StatusMessage = "Conectado correctamente";
+            if (connected == 0)
+                StatusMessage = "Error: no se pudo conectar. Verifique puerto COM, cable y configuración.";
+            else if (connected < total)
+                StatusMessage = $"{connected}/{total} básculas conectadas";
+            else
+                StatusMessage = "Conectado correctamente";
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error de conexión: {ex.Message}";
         }
-    }
-
-    private static async Task<CommunicationConfig> LoadCommunicationConfigAsync(IRepository<SystemConfig> repo)
-    {
-        var configs = await repo.GetAllAsync();
-        var dict = configs.ToDictionary(c => c.Key, c => c.Value);
-
-        return new CommunicationConfig
-        {
-            Type = dict.GetValueOrDefault("weighing_protocol") switch
-            {
-                "modbus_tcp" => ProtocolType.ModbusTcp,
-                "modbus_rtu" => ProtocolType.ModbusRtu,
-                "sensoc" => ProtocolType.Sensoc,
-                _ => ProtocolType.Serial
-            },
-            PortName = dict.GetValueOrDefault("serial_port", "COM1"),
-            BaudRate = int.TryParse(dict.GetValueOrDefault("serial_baudrate"), out var br) ? br : 9600,
-            Parity = int.TryParse(dict.GetValueOrDefault("serial_parity"), out var p) ? p : 0,
-            DataBits = int.TryParse(dict.GetValueOrDefault("serial_databits"), out var db) ? db : 8,
-            StopBits = int.TryParse(dict.GetValueOrDefault("serial_stopbits"), out var sb) ? sb : 1,
-            IpAddress = dict.GetValueOrDefault("ip_address", "192.168.1.100"),
-            TcpPort = int.TryParse(dict.GetValueOrDefault("tcp_port"), out var tp) ? tp : 502,
-            SlaveId = byte.TryParse(dict.GetValueOrDefault("modbus_slaveid"), out var si) ? si : (byte)1,
-            RegisterAddress = ushort.TryParse(dict.GetValueOrDefault("modbus_register"), out var ra) ? ra : (ushort)0,
-            ReadIntervalMs = int.TryParse(dict.GetValueOrDefault("read_interval_ms"), out var ri) ? ri : 200
-        };
-    }
-
-    private async Task<string> LoadReceivingCompanyAsync()
-    {
-        var ctx = _dbService.CreateContext();
-        var configs = await new Repository<SystemConfig>(ctx).GetAllAsync();
-        return configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PesaControl";
     }
 
     [RelayCommand]
@@ -218,7 +333,7 @@ public partial class WeighingViewModel : ObservableObject
         try
         {
             StatusMessage = "Desconectando...";
-            await _weighingService.DisconnectAsync();
+            await _scaleManager.DisconnectAllAsync();
             StatusMessage = "Desconectado correctamente";
         }
         catch (Exception ex)
@@ -227,11 +342,7 @@ public partial class WeighingViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task TareAsync()
-    {
-        await _weighingService.TareAsync();
-    }
+    // ── Weigh-in ───────────────────────────────────────────
 
     [RelayCommand]
     private async Task StartWeighInAsync()
@@ -242,9 +353,28 @@ public partial class WeighingViewModel : ObservableObject
             return;
         }
 
+        var scale = _scaleManager.GetByName(EntryScaleName);
+        if (scale == null || !scale.IsConnected)
+        {
+            StatusMessage = $"Báscula {EntryScaleName} no disponible";
+            return;
+        }
+
+        var grossWeight = scale.CurrentWeight;
+
+        _exitCaptured = false;
+        var currentExitScale = _scaleManager.GetByName(ExitScaleName);
+        if (currentExitScale != null)
+            ExitWeightText = $"{currentExitScale.CurrentWeight:F1} kg";
+
+        if (grossWeight == 0)
+        {
+            StatusMessage = "Advertencia: peso de entrada en 0. Verifique la báscula.";
+        }
+
         _currentRecord = new WeighingRecord
         {
-            TicketNumber = await _weighingRepo.GetNextTicketNumberAsync(),
+            TicketNumber = await _dataService.GetNextTicketAsync(),
             WeighInTime = DateTime.Now,
             LicensePlate = LicensePlate.Trim().ToUpper(),
             PlateCountry = PlateCountry,
@@ -253,15 +383,20 @@ public partial class WeighingViewModel : ObservableObject
             ProductId = SelectedProduct?.Id,
             CompanyId = SelectedCompany?.Id,
             Status = WeighingStatus.WeighingIn,
-            GrossWeight = _weighingService.CurrentWeight
+            GrossWeight = grossWeight,
+            EntryScaleName = EntryScaleName
         };
 
-        await _weighingRepo.AddAsync(_currentRecord);
+        _currentRecord = await _dataService.CreateAsync(_currentRecord);
+
+        EntryWeightText = $"{grossWeight:F1} kg";
         IsWeighingIn = true;
         StatusMessage = $"Pesada de entrada: {_currentRecord.TicketNumber}";
         await LoadActiveWeighingsAsync();
         WeakReferenceMessenger.Default.Send(new WeighingDataChangedMessage());
     }
+
+    // ── Weigh-out ──────────────────────────────────────────
 
     [RelayCommand]
     private async Task CompleteWeighOutAsync()
@@ -273,7 +408,7 @@ public partial class WeighingViewModel : ObservableObject
             if (SelectedRecord != null)
                 record = SelectedRecord;
             else if (!string.IsNullOrWhiteSpace(LicensePlate))
-                record = await _weighingRepo.GetActiveWeighingByPlateAsync(LicensePlate.Trim().ToUpper());
+                record = await _dataService.GetActiveByPlateAsync(LicensePlate.Trim().ToUpper());
 
             if (record == null)
             {
@@ -281,28 +416,36 @@ public partial class WeighingViewModel : ObservableObject
                 return;
             }
 
-            record.WeighOutTime = DateTime.Now;
-            record.TareWeight = _weighingService.CurrentWeight;
+            var scale = _scaleManager.GetByName(ExitScaleName);
+            if (scale == null || !scale.IsConnected)
+            {
+                StatusMessage = $"Báscula {ExitScaleName} no disponible";
+                return;
+            }
 
-            if (Math.Abs(record.GrossWeight - record.TareWeight) < 0.001m)
+            var tareWeight = scale.CurrentWeight;
+
+            if (Math.Abs(record.GrossWeight - tareWeight) < 0.001m)
             {
                 StatusMessage = "Advertencia: peso de salida igual al de entrada. "
                     + "Verifique que el vehículo haya salido de la báscula.";
             }
 
+            record.WeighOutTime = DateTime.Now;
+            record.TareWeight = tareWeight;
+            record.ExitScaleName = ExitScaleName;
+            record.IsExitWeightManual = false;
             record.NetWeight = Math.Abs(record.GrossWeight - record.TareWeight);
             record.Status = WeighingStatus.Completed;
 
-            await _weighingRepo.UpdateAsync(record);
+            await _dataService.UpdateAsync(record);
 
+            ExitWeightText = $"{tareWeight:F1} kg";
+            _exitCaptured = true;
             _lastCompletedRecord = record;
 
-            if (record == _currentRecord)
-                _currentRecord = null;
-
-            IsWeighingIn = false;
+            NewWeighing();
             StatusMessage = $"Pesaje completado: {record.TicketNumber}";
-            ClearForm();
             await LoadActiveWeighingsAsync();
             WeakReferenceMessenger.Default.Send(new WeighingDataChangedMessage());
 
@@ -314,19 +457,24 @@ public partial class WeighingViewModel : ObservableObject
         }
     }
 
+    // ── Cancel ─────────────────────────────────────────────
+
     [RelayCommand]
     private async Task CancelWeighingAsync()
     {
         if (_currentRecord != null)
         {
             _currentRecord.Status = WeighingStatus.Cancelled;
-            await _weighingRepo.UpdateAsync(_currentRecord);
+            await _dataService.UpdateAsync(_currentRecord);
             _currentRecord = null;
             IsWeighingIn = false;
+            _exitCaptured = false;
             StatusMessage = "Pesaje cancelado";
             await LoadActiveWeighingsAsync();
         }
     }
+
+    // ── Print ──────────────────────────────────────────────
 
     [RelayCommand]
     private async Task PrintPreviewAsync()
@@ -335,22 +483,19 @@ public partial class WeighingViewModel : ObservableObject
 
         if (_currentRecord != null)
         {
-            var ctx = _dbService.CreateContext();
-            var full = await new WeighingRepository(ctx).GetByIdAsync(_currentRecord.Id);
+            var full = await _dataService.GetByIdAsync(_currentRecord.Id);
             if (full == null) return;
             record = full;
         }
         else if (SelectedRecord != null)
         {
-            var ctx = _dbService.CreateContext();
-            var full = await new WeighingRepository(ctx).GetByIdAsync(SelectedRecord.Id);
+            var full = await _dataService.GetByIdAsync(SelectedRecord.Id);
             if (full == null) return;
             record = full;
         }
         else if (_lastCompletedRecord != null)
         {
-            var ctx = _dbService.CreateContext();
-            var full = await new WeighingRepository(ctx).GetByIdAsync(_lastCompletedRecord.Id);
+            var full = await _dataService.GetByIdAsync(_lastCompletedRecord.Id);
             if (full == null) return;
             record = full;
         }
@@ -366,9 +511,9 @@ public partial class WeighingViewModel : ObservableObject
                 DriverName = string.IsNullOrWhiteSpace(DriverName) ? "---" : DriverName.Trim(),
                 Product = SelectedProduct,
                 Company = SelectedCompany,
-                GrossWeight = 0,
-                TareWeight = 0,
-                NetWeight = 0,
+                GrossWeight = _currentRecord?.GrossWeight ?? 0,
+                TareWeight = _currentRecord?.TareWeight ?? 0,
+                NetWeight = Math.Abs((_currentRecord?.GrossWeight ?? 0) - (_currentRecord?.TareWeight ?? 0)),
                 Status = WeighingStatus.Completed
             };
         }
@@ -384,13 +529,29 @@ public partial class WeighingViewModel : ObservableObject
         StatusMessage = success ? "Ticket enviado a impresora" : "Error al imprimir";
     }
 
-    private void ClearForm()
+    // ── Helpers ────────────────────────────────────────────
+
+    [RelayCommand]
+    private void NewWeighing()
     {
         LicensePlate = "";
+        PlateCountry = "CL";
         OperatorName = "";
         DriverName = "";
         SelectedProduct = null;
         SelectedCompany = null;
+        _currentRecord = null;
+        IsWeighingIn = false;
+        SelectedRecord = null;
+        _exitCaptured = false;
+
+        var entryScale = _scaleManager.GetByName(EntryScaleName);
+        var exitScale = _scaleManager.GetByName(ExitScaleName);
+
+        EntryWeightText = entryScale != null ? $"{entryScale.CurrentWeight:F1} kg" : "0.0 kg";
+        ExitWeightText = exitScale != null ? $"{exitScale.CurrentWeight:F1} kg" : "0.0 kg";
+
+        StatusMessage = "Listo";
     }
 
     public void SetCameraService(ICameraService cameraService)
@@ -424,55 +585,19 @@ public partial class WeighingViewModel : ObservableObject
             else
                 record.PhotoPath = filePath;
 
-            await _weighingRepo.UpdateAsync(record);
+            await _dataService.UpdateAsync(record);
         }
-        catch (OperationCanceledException)
-        {
-            // Timeout — ignorar
-        }
-        catch
-        {
-            // Error de captura — ignorar
-        }
+        catch (OperationCanceledException) { }
+        catch { }
     }
 
-    private void WireEvents()
+    private async Task<string> LoadReceivingCompanyAsync()
     {
-        _weighingService.WeightUpdated += (s, w) =>
-        {
-            App.Current.Dispatcher.Invoke(() =>
-            {
-                WeightDisplay = $"{w:F1}kg";
-                IsReading = true;
-                LastReadingTime = DateTime.Now.ToString("HH:mm:ss.fff");
-                StatusMessage = $"Peso: {w:F1}kg";
-                RawData = _weighingService.LastReading?.RawData ?? "";
-            });
-        };
-
-        _weighingService.StabilityChanged += (s, stable) =>
-        {
-            App.Current.Dispatcher.Invoke(() => IsStable = stable);
-        };
-
-        _weighingService.ConnectionChanged += (s, connected) =>
-        {
-            App.Current.Dispatcher.Invoke(() =>
-            {
-                IsConnected = connected;
-                ConnectionStatus = connected ? "Conectado" : "Desconectado";
-                if (!connected)
-                    StatusMessage = "Desconectado de la báscula";
-            });
-        };
-
-        _weighingService.ErrorOccurred += (s, err) =>
-        {
-            App.Current.Dispatcher.Invoke(() =>
-            {
-                StatusMessage = $"⚠ {err}";
-            });
-        };
+        if (_dbService == null) return "PesaControl";
+        using var ctx = _dbService.CreateContext();
+        var repo = new Repository<SystemConfig>(ctx);
+        var configs = await repo.GetAllAsync();
+        return configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PesaControl";
     }
 
     [RelayCommand]
@@ -485,14 +610,14 @@ public partial class WeighingViewModel : ObservableObject
 
     private async Task LoadCatalogsAsync()
     {
-        var products = await _productRepo.GetAllAsync();
+        var products = await _dataService.GetProductsAsync();
         App.Current.Dispatcher.Invoke(() =>
         {
             Products.Clear();
             foreach (var p in products) Products.Add(p);
         });
 
-        var companies = await _companyRepo.GetAllAsync();
+        var companies = await _dataService.GetCompaniesAsync();
         App.Current.Dispatcher.Invoke(() =>
         {
             Companies.Clear();
@@ -500,9 +625,31 @@ public partial class WeighingViewModel : ObservableObject
         });
     }
 
+    private async Task LoadOperatorsAsync()
+    {
+        var items = await _dataService.GetOperatorsAsync();
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            AllOperators.Clear();
+            foreach (var o in items) AllOperators.Add(o);
+            OperatorsView.Refresh();
+        });
+    }
+
+    private async Task LoadDriversAsync()
+    {
+        var items = await _dataService.GetDriversAsync();
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            AllDrivers.Clear();
+            foreach (var d in items) AllDrivers.Add(d);
+            DriversView.Refresh();
+        });
+    }
+
     private async Task LoadActiveWeighingsAsync()
     {
-        var records = await _weighingRepo.GetTodayWeighingsAsync();
+        var records = await _dataService.GetTodayAsync();
         App.Current.Dispatcher.Invoke(() =>
         {
             ActiveWeighings.Clear();

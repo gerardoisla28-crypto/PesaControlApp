@@ -47,20 +47,8 @@
             <DataTemplate DataType="{x:Type vm:UsersViewModel}">
                 <views:UsersView />
             </DataTemplate>
-            <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
-                <Grid>
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock Text="{Binding Title}"
-                                   FontSize="28" FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,15" />
-                        <TextBlock Text="{Binding Message}"
-                                   FontSize="18"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   HorizontalAlignment="Center" />
-                    </StackPanel>
-                </Grid>
+            <DataTemplate DataType="{x:Type vm:ReportesViewModel}">
+                <views:ReportesView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

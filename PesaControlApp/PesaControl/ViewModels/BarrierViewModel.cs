@@ -13,6 +13,7 @@ public partial class BarrierViewModel : ObservableObject
 {
     private readonly DatabaseService _dbService;
     private IBarrierService? _barrierService;
+    private IBarrierService? _externalService;
     private readonly IRepository<BarrierConfig> _barrierRepo;
 
     [ObservableProperty] private BarrierConfig? _selectedBarrier;
@@ -31,6 +32,88 @@ public partial class BarrierViewModel : ObservableObject
         _ = LoadBarriersAsync();
     }
 
+    public void SetExternalService(IBarrierService? service)
+    {
+        _externalService = service;
+    }
+
+    // ── Config editor ──────────────────────────────────────
+
+    [ObservableProperty] private bool _isBarrierEditorOpen;
+    [ObservableProperty] private BarrierConfig? _editingBarrier;
+
+    public string[] ConnectionTypeNames => ["Serial", "Modbus RTU", "Modbus TCP"];
+    public int[] BaudRates => [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200];
+
+    [RelayCommand]
+    private void AddBarrier()
+    {
+        EditingBarrier = new BarrierConfig
+        {
+            Name = $"Barrera {Barriers.Count + 1}",
+            IsActive = true,
+            ConnectionType = DeviceConnectionType.Serial,
+            PortName = "COM3",
+            BaudRate = 9600
+        };
+        IsBarrierEditorOpen = true;
+    }
+
+    [RelayCommand]
+    private void EditBarrier()
+    {
+        if (SelectedBarrier is null) return;
+        EditingBarrier = new BarrierConfig
+        {
+            Id = SelectedBarrier.Id,
+            Name = SelectedBarrier.Name,
+            IsActive = SelectedBarrier.IsActive,
+            ConnectionType = SelectedBarrier.ConnectionType,
+            PortName = SelectedBarrier.PortName,
+            BaudRate = SelectedBarrier.BaudRate,
+            SlaveId = SelectedBarrier.SlaveId,
+            CoilAddress = SelectedBarrier.CoilAddress,
+            IpAddress = SelectedBarrier.IpAddress,
+            TcpPort = SelectedBarrier.TcpPort
+        };
+        IsBarrierEditorOpen = true;
+    }
+
+    [RelayCommand]
+    private async Task SaveBarrierAsync()
+    {
+        if (EditingBarrier is null) return;
+        var saved = EditingBarrier;
+        var ctx = _dbService.CreateContext();
+        var repo = new Repository<BarrierConfig>(ctx);
+        if (saved.Id == 0)
+            await repo.AddAsync(saved);
+        else
+            await repo.UpdateAsync(saved);
+        IsBarrierEditorOpen = false;
+        EditingBarrier = null;
+        await LoadBarriersAsync();
+        StatusMessage = "Barrera guardada";
+    }
+
+    [RelayCommand]
+    private void CancelBarrierEditor()
+    {
+        IsBarrierEditorOpen = false;
+        EditingBarrier = null;
+    }
+
+    [RelayCommand]
+    private async Task DeleteBarrierAsync()
+    {
+        if (SelectedBarrier is null) return;
+        var ctx = _dbService.CreateContext();
+        var repo = new Repository<BarrierConfig>(ctx);
+        await repo.DeleteAsync(SelectedBarrier);
+        await LoadBarriersAsync();
+        StatusMessage = "Barrera eliminada";
+    }
+
     [RelayCommand]
     private async Task ConnectAsync()
     {
@@ -45,7 +128,7 @@ public partial class BarrierViewModel : ObservableObject
             StatusMessage = "Conectando...";
             await DisconnectAsync();
 
-            _barrierService = CreateService(SelectedBarrier);
+            _barrierService = _externalService ?? CreateService(SelectedBarrier);
             _barrierService.ConnectionStatusChanged += OnConnectionStatusChanged;
             _barrierService.ErrorOccurred += (_, err) =>
                 App.Current.Dispatcher.Invoke(() => StatusMessage = $"Error: {err}");
@@ -70,7 +153,10 @@ public partial class BarrierViewModel : ObservableObject
         {
             _barrierService.ConnectionStatusChanged -= OnConnectionStatusChanged;
             await _barrierService.DisconnectAsync();
-            _barrierService = null;
+            if (_externalService == null)
+            {
+                _barrierService = null;
+            }
         }
 
         IsConnected = false;

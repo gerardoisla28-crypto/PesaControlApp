@@ -12,11 +12,15 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
     private volatile bool _disposed;
     private readonly object _bufferLock = new();
     private readonly StringBuilder _buffer = new();
+    private static bool _debugEnabled;
 
     private WeightReading _lastReading;
+    private DateTime _lastReadingTime;
+    private volatile bool _hasPendingData;
 
     public string Name => "Sensoc (Kronos HU1081)";
     public bool IsConnected => _port?.IsOpen ?? false;
+    public static bool DebugEnabled { get => _debugEnabled; set => _debugEnabled = value; }
 
     public event EventHandler<WeightReading>? WeightChanged;
     public event EventHandler<bool>? ConnectionStatusChanged;
@@ -24,14 +28,21 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
     public async Task ConnectAsync(CommunicationConfig config)
     {
+        await CleanupAsync();
+        _disposed = false;
         _config = config;
+        _buffer.Clear();
+        _hasPendingData = false;
+        _lastReading = default;
+        _lastReadingTime = DateTime.MinValue;
+
         try
         {
             _port = new SerialPort(config.PortName, config.BaudRate,
                 (Parity)config.Parity, config.DataBits, (StopBits)config.StopBits)
             {
-                ReadTimeout = 1000,
-                WriteTimeout = 1000,
+                ReadTimeout = 500,
+                WriteTimeout = 500,
                 DtrEnable = true,
                 RtsEnable = true,
                 NewLine = "\r\n",
@@ -40,21 +51,14 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
             _port.DataReceived += OnDataReceived;
             _port.Open();
-            _disposed = false;
             _cts = new CancellationTokenSource();
 
             _ = ReadLoopAsync(_cts.Token);
-
-            var msg = $"[{DateTime.Now:HH:mm:ss.fff}] Sensoc OK port={config.PortName} baud={config.BaudRate} dtr=1 rts=1";
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "PesaControl_debug.log"), msg + Environment.NewLine); } catch { }
 
             ConnectionStatusChanged?.Invoke(this, true);
         }
         catch (Exception ex)
         {
-            var msg = $"[{DateTime.Now:HH:mm:ss.fff}] Sensoc FAIL: {ex.Message}";
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "PesaControl_debug.log"), msg + Environment.NewLine); } catch { }
-
             ErrorOccurred?.Invoke(this, $"Error conexión Sensoc: {ex.Message}");
             ConnectionStatusChanged?.Invoke(this, false);
         }
@@ -62,18 +66,7 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
     public async Task DisconnectAsync()
     {
-        _disposed = true;
-        _cts?.Cancel();
-
-        if (_port is { IsOpen: true })
-        {
-            _port.DataReceived -= OnDataReceived;
-            await Task.Run(() =>
-            {
-                try { _port.Close(); } catch { }
-            });
-        }
-
+        await CleanupAsync();
         ConnectionStatusChanged?.Invoke(this, false);
     }
 
@@ -113,14 +106,69 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
     private async Task ReadLoopAsync(CancellationToken ct)
     {
-        // En modo de envío continuo, el peso se recibe a través del evento DataReceived.
-        // Este loop solo mantiene la conexión activa o realiza otras tareas de fondo si es necesario.
-        // Por ahora, solo se espera la cancelación.
+        var pollInterval = Math.Max(_config?.ReadIntervalMs ?? 500, 300);
+
+        while (!ct.IsCancellationRequested && !_disposed)
+        {
+            try
+            {
+                await Task.Delay(pollInterval, ct);
+                if (_port?.IsOpen != true || _disposed) continue;
+
+                if ((DateTime.UtcNow - _lastReadingTime).TotalMilliseconds < pollInterval)
+                    continue;
+
+                if (_hasPendingData)
+                {
+                    _hasPendingData = false;
+                    continue;
+                }
+
+                // Fallback: send weight request command
+                var cmd = "W\r\n"u8.ToArray();
+                _port.Write(cmd, 0, cmd.Length);
+
+                await Task.Delay(100, ct);
+
+                var rawBytes = ReadRawBytes();
+                if (rawBytes.Length > 0)
+                {
+                    var text = Encoding.ASCII.GetString(rawBytes);
+                    ProcessIncomingData(text);
+                }
+            }
+            catch (OperationCanceledException) { break; }
+            catch (ObjectDisposedException) { break; }
+            catch (Exception ex)
+            {
+                if (!_disposed)
+                    ErrorOccurred?.Invoke(this, $"Error lectura: {ex.Message}");
+            }
+        }
+    }
+
+    private byte[] ReadRawBytes()
+    {
         try
         {
-            await Task.Delay(Timeout.Infinite, ct);
+            if (_port == null) return [];
+            var buf = new byte[256];
+            var total = 0;
+            while (_port!.BytesToRead > 0 && total < buf.Length)
+            {
+                var read = _port.Read(buf, total, Math.Min(buf.Length - total, _port.BytesToRead));
+                if (read <= 0) break;
+                total += read;
+            }
+            if (total == 0) return [];
+            var result = new byte[total];
+            Array.Copy(buf, result, total);
+            return result;
         }
-        catch (TaskCanceledException) { /* Ignorar cancelación */ }
+        catch
+        {
+            return [];
+        }
     }
 
     private void OnDataReceived(object? sender, SerialDataReceivedEventArgs e)
@@ -132,11 +180,11 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
             var raw = _port?.ReadExisting();
             if (string.IsNullOrEmpty(raw)) return;
 
+            _hasPendingData = true;
             ProcessIncomingData(raw);
         }
         catch (Exception ex)
         {
-            LogDebug("ERR", ex.Message);
             if (!_disposed)
                 ErrorOccurred?.Invoke(this, $"Error recepción: {ex.Message}");
         }
@@ -144,8 +192,6 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
     private void ProcessIncomingData(string raw)
     {
-        LogDebug("RX", raw);
-
         string[] frames;
         lock (_bufferLock)
         {
@@ -158,16 +204,17 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
         foreach (var frame in frames)
         {
-            var trimmed = frame.Trim(); // Más permisivo con cualquier espacio o carácter de control
+            var trimmed = frame.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
-
-            LogDebug("FRAME", trimmed);
 
             var reading = ParseSensocFrame(trimmed);
             if (reading.Value != 0 || !string.IsNullOrEmpty(reading.RawData))
             {
                 lock (_bufferLock)
+                {
                     _lastReading = reading;
+                    _lastReadingTime = DateTime.UtcNow;
+                }
                 WeightChanged?.Invoke(this, reading);
             }
         }
@@ -175,9 +222,6 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
 
     private static WeightReading ParseSensocFrame(string frame)
     {
-        var logMsg = $"[{DateTime.Now:HH:mm:ss.fff}] PARSE frame=<{frame.Replace("\r","\\r").Replace("\n","\\n")}> len={frame.Length}";
-        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "PesaControl_debug.log"), logMsg + Environment.NewLine); } catch { }
-
         var value = ParseWeightValue(frame);
         var stable = frame.Contains('S', StringComparison.OrdinalIgnoreCase)
                      && !frame.Contains('U', StringComparison.OrdinalIgnoreCase);
@@ -213,23 +257,40 @@ public class SensocProtocol : IWeighingProtocol, IDisposable
         return 0;
     }
 
-    private static void LogDebug(string label, string data)
+    private async Task CleanupAsync()
     {
-        var hex = data.Length == 0 ? "(empty)" : string.Join(" ", data.Select(c => $"0x{(byte)c:X2}"));
-        var escaped = data.Replace("\r", "\\r").Replace("\n", "\\n");
-        var msg = $"[{DateTime.Now:HH:mm:ss.fff}] {label} len={data.Length} hex=[{hex}] txt=<{escaped}>";
-        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "PesaControl_debug.log"), msg + Environment.NewLine); } catch { }
+        _disposed = true;
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+
+        if (_port != null)
+        {
+            _port.DataReceived -= OnDataReceived;
+            await Task.Run(() =>
+            {
+                try
+                {
+                    if (_port.IsOpen)
+                        _port.Close();
+                }
+                catch { }
+            });
+            _port.Dispose();
+            _port = null;
+        }
+
+        lock (_bufferLock)
+        {
+            _buffer.Clear();
+            _lastReading = default;
+            _lastReadingTime = DateTime.MinValue;
+            _hasPendingData = false;
+        }
     }
 
     public void Dispose()
     {
-        _disposed = true;
-        if (_port is { IsOpen: true })
-        {
-            try { _port.DataReceived -= OnDataReceived; _port.Close(); } catch { }
-        }
-        _port?.Dispose();
-        _cts?.Cancel();
-        _cts?.Dispose();
+        CleanupAsync().GetAwaiter().GetResult();
     }
 }

@@ -39,6 +39,43 @@ public class DatabaseService
         {
             // Column already exists — ignore
         }
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE WeighingRecords ADD COLUMN EntryScaleName TEXT NULL");
+        }
+        catch { }
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE WeighingRecords ADD COLUMN ExitScaleName TEXT NULL");
+        }
+        catch { }
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE WeighingRecords ADD COLUMN IsExitWeightManual INTEGER NOT NULL DEFAULT 0");
+        }
+        catch { }
+        await context.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS ScaleConfigs (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                SortOrder INTEGER NOT NULL DEFAULT 0,
+                ProtocolType TEXT NOT NULL DEFAULT 'Serial',
+                PortName TEXT,
+                BaudRate INTEGER NOT NULL DEFAULT 9600,
+                Parity INTEGER NOT NULL DEFAULT 0,
+                DataBits INTEGER NOT NULL DEFAULT 8,
+                StopBits INTEGER NOT NULL DEFAULT 1,
+                IpAddress TEXT,
+                TcpPort INTEGER NOT NULL DEFAULT 502,
+                SlaveId INTEGER NOT NULL DEFAULT 1,
+                RegisterAddress INTEGER NOT NULL DEFAULT 0,
+                ReadIntervalMs INTEGER NOT NULL DEFAULT 200
+            )");
+        await MigrateLegacyScaleConfigAsync(context);
         await SeedAsync(context);
     }
 
@@ -122,6 +159,42 @@ public class DatabaseService
             new CameraConfig { Name = "Cámara IP Principal", Url = "http://192.168.1.200/video", Type = CameraType.IP, IsActive = true }
         );
 
+        await context.SaveChangesAsync();
+    }
+
+    private async Task MigrateLegacyScaleConfigAsync(AppDbContext context)
+    {
+        if (await context.ScaleConfigs.AnyAsync())
+            return;
+
+        var configs = await context.SystemConfigs.ToListAsync();
+        var dict = configs.ToDictionary(c => c.Key, c => c.Value);
+
+        var scale = new ScaleConfig
+        {
+            Name = "Báscula 1",
+            IsActive = true,
+            SortOrder = 0,
+            ProtocolType = dict.GetValueOrDefault("weighing_protocol") switch
+            {
+                "modbus_tcp" => ProtocolType.ModbusTcp,
+                "modbus_rtu" => ProtocolType.ModbusRtu,
+                "sensoc" => ProtocolType.Sensoc,
+                _ => ProtocolType.Serial
+            },
+            PortName = dict.GetValueOrDefault("serial_port", "COM1"),
+            BaudRate = int.TryParse(dict.GetValueOrDefault("serial_baudrate"), out var br) ? br : 9600,
+            Parity = int.TryParse(dict.GetValueOrDefault("serial_parity"), out var p) ? p : 0,
+            DataBits = int.TryParse(dict.GetValueOrDefault("serial_databits"), out var db) ? db : 8,
+            StopBits = int.TryParse(dict.GetValueOrDefault("serial_stopbits"), out var sb) ? sb : 1,
+            IpAddress = dict.GetValueOrDefault("ip_address", ""),
+            TcpPort = int.TryParse(dict.GetValueOrDefault("tcp_port"), out var tp) ? tp : 502,
+            SlaveId = (byte)(int.TryParse(dict.GetValueOrDefault("modbus_slaveid"), out var si) ? si : 1),
+            RegisterAddress = (ushort)(int.TryParse(dict.GetValueOrDefault("modbus_register"), out var ra) ? ra : 0),
+            ReadIntervalMs = int.TryParse(dict.GetValueOrDefault("read_interval_ms"), out var ri) ? ri : 200
+        };
+
+        context.ScaleConfigs.Add(scale);
         await context.SaveChangesAsync();
     }
 

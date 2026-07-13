@@ -24,7 +24,7 @@ public partial class DashboardViewModel : ObservableObject
     public UsersViewModel? UsersVM { get; set; }
     public SettingsViewModel? SettingsVM { get; set; }
     public CatalogsViewModel? CatalogsVM { get; set; }
-    public PlaceholderViewModel? ReportsPlaceholder { get; set; }
+    public ReportesViewModel? ReportesVM { get; set; }
 
     [ObservableProperty] private bool _isControlModuleEnabled = true;
 
@@ -98,7 +98,7 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     private void ShowReports()
     {
-        CurrentViewModel = ReportsPlaceholder;
+        CurrentViewModel = ReportesVM;
         CurrentSection = "Reportes";
     }
 

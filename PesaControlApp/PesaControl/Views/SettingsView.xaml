@@ -16,111 +16,228 @@
         <TextBlock Grid.Row="0" Text="Configuración del Sistema" Style="{StaticResource SectionTitle}" FontSize="20" Margin="0,0,0,8" />
 
         <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem Header="Báscula">
+            <!-- TAB: Básculas -->
+            <TabItem Header="Básculas">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Scale list -->
+                    <Border Style="{StaticResource CardPanel}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Básculas conectadas" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
+
+                            <ListBox ItemsSource="{Binding ScaleConfigs}"
+                                     SelectedItem="{Binding SelectedScale}"
+                                     Background="Transparent"
+                                     BorderThickness="0">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource SurfaceMidBrush}"
+                                                CornerRadius="6" Padding="10" Margin="0,0,0,4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Width="10" Height="10" Margin="0,0,8,0"
+                                                         Fill="{Binding IsActive, Converter={StaticResource BoolToGreenRedBrush}}" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding PortName, StringFormat='{}{0}'}"
+                                                               FontSize="11"
+                                                               Foreground="{StaticResource TextMutedBrush}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding ProtocolType}"
+                                                           FontSize="11"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="+ Agregar" Command="{Binding AddScaleCommand}"
+                                        Style="{StaticResource PrimaryButton}" Margin="0,0,6,0" />
+                                <Button Content="✎ Editar" Command="{Binding EditScaleCommand}"
+                                        Style="{StaticResource WarningButton}" Margin="0,0,6,0" />
+                                <Button Content="✕ Eliminar" Command="{Binding DeleteScaleCommand}"
+                                        Style="{StaticResource DangerButton}" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Grid.Row="1" Text="{Binding ScaleStatusMessage}"
+                               Style="{StaticResource StatusMessage}" />
+
+                    <!-- Scale editor -->
+                    <Border Grid.Row="2" Style="{StaticResource CardPanel}" Padding="20"
+                            Margin="0,8,0,0"
+                            Visibility="{Binding IsScaleEditorOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Configurar Báscula" Style="{StaticResource SectionTitle}" FontSize="18" Margin="0,0,0,12" />
+
+                            <Label Content="Nombre" Style="{StaticResource FormLabel}" />
+                            <TextBox Text="{Binding EditingScale.Name}" Margin="0,0,0,8" />
+
+                            <CheckBox IsChecked="{Binding EditingScale.IsActive}" Content="Activa"
+                                      Margin="0,0,0,8" />
+
+                            <Label Content="Protocolo" Style="{StaticResource FormLabel}" />
+                            <ComboBox ItemsSource="{Binding ProtocolNames}"
+                                      SelectedItem="{Binding SelectedProtocolName}"
+                                      Margin="0,0,0,8" />
+
+                            <Border Background="{StaticResource SurfaceDarkBrush}"
+                                    CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                    Visibility="{Binding IsSerialProtocol, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Parámetros Serial" FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Puerto" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding AvailablePorts}"
+                                                      SelectedItem="{Binding EditingScale.PortName}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Baudrate" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding BaudRates}"
+                                                      SelectedItem="{Binding EditingScale.BaudRate}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="3,0">
+                                            <Label Content="Paridad" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding ParityOptions}"
+                                                      SelectedItem="{Binding EditingScale.Parity}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" Margin="3,0">
+                                            <Label Content="Data Bits" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding DataBitsOptions}"
+                                                      SelectedItem="{Binding EditingScale.DataBits}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="4" Margin="6,0,0,0">
+                                            <Label Content="Stop Bits" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding StopBitsOptions}"
+                                                      SelectedItem="{Binding EditingScale.StopBits}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Slave ID" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.SlaveId}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Registro" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.RegisterAddress}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                            <Label Content="Intervalo (ms)" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.ReadIntervalMs}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{StaticResource SurfaceDarkBrush}"
+                                    CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                    Visibility="{Binding IsTcpProtocol, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Parámetros Red (Modbus TCP)" FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Dirección IP" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.IpAddress}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Puerto TCP" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.TcpPort}" />
+                                        </StackPanel>
+                                                    <StackPanel Grid.Column="2" Margin="3,0">
+                                                        <Label Content="Slave ID" Style="{StaticResource FormLabel}" />
+                                                        <TextBox Text="{Binding EditingScale.SlaveId}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="3" Margin="3,0">
+                                                        <Label Content="Registro" Style="{StaticResource FormLabel}" />
+                                                        <TextBox Text="{Binding EditingScale.RegisterAddress}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="4" Margin="6,0,0,0">
+                                                        <Label Content="Intervalo (ms)" Style="{StaticResource FormLabel}" />
+                                                        <TextBox Text="{Binding EditingScale.ReadIntervalMs}" />
+                                                    </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
+                                <Button Content="Probar Conexión" Command="{Binding TestConnectionCommand}"
+                                        Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
+                                <Button Content="Guardar" Command="{Binding SaveScaleCommand}"
+                                        Style="{StaticResource SuccessButton}" Margin="0,0,8,0" />
+                                <Button Content="Cancelar" Command="{Binding CancelScaleEditorCommand}"
+                                        Style="{StaticResource DangerButton}" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB: Modo operación -->
+            <TabItem Header="Red">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0,8,15,0">
-
                         <Border Style="{StaticResource CardPanel}">
                             <StackPanel>
-                                <TextBlock Text="Comunicación — Báscula" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="Modo de Operación" Style="{StaticResource SectionTitle}" />
 
-                                <Label Content="Protocolo" Style="{StaticResource FormLabel}" />
-                                <ComboBox ItemsSource="{Binding ProtocolNames}"
-                                          SelectedItem="{Binding SelectedProtocolName}"
-                                          Margin="0,0,0,8" />
+                                <Label Content="Modo" Style="{StaticResource FormLabel}" />
+                                <ComboBox ItemsSource="{Binding ModeNames}"
+                                          SelectedItem="{Binding SelectedModeName}"
+                                          Margin="0,0,0,12" />
 
                                 <Border Background="{StaticResource SurfaceDarkBrush}"
-                                        CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                        CornerRadius="6" Padding="12"
+                                        Visibility="{Binding SelectedModeName, Converter={StaticResource StringVisibilityConverter}, ConverterParameter=Servidor}">
                                     <StackPanel>
-                                        <TextBlock Text="Parámetros Serial" FontWeight="Bold"
+                                        <TextBlock Text="Configuración de Servidor" FontWeight="Bold"
                                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                                <Label Content="Puerto" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding SerialPort}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Margin="3,0">
-                                                <Label Content="Baudrate" Style="{StaticResource FormLabel}" />
-                                                <ComboBox ItemsSource="{Binding BaudRates}"
-                                                          SelectedItem="{Binding SerialBaudRate}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2" Margin="3,0">
-                                                <Label Content="Paridad" Style="{StaticResource FormLabel}" />
-                                                <ComboBox ItemsSource="{Binding ParityOptions}"
-                                                          SelectedItem="{Binding SerialParity}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="3" Margin="3,0">
-                                                <Label Content="Data Bits" Style="{StaticResource FormLabel}" />
-                                                <ComboBox ItemsSource="{Binding DataBitsOptions}"
-                                                          SelectedItem="{Binding SerialDataBits}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="4" Margin="6,0,0,0">
-                                                <Label Content="Stop Bits" Style="{StaticResource FormLabel}" />
-<ComboBox ItemsSource="{Binding StopBitsOptions}"
-          SelectedItem="{Binding SerialStopBits}" />
-                                            </StackPanel>
-                                        </Grid>
+                                        <Label Content="Puerto" Style="{StaticResource FormLabel}" />
+                                        <TextBox Text="{Binding ServerPort}" />
                                     </StackPanel>
                                 </Border>
 
                                 <Border Background="{StaticResource SurfaceDarkBrush}"
-                                        CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                        CornerRadius="6" Padding="12"
+                                        Visibility="{Binding SelectedModeName, Converter={StaticResource StringVisibilityConverter}, ConverterParameter=Cliente}">
                                     <StackPanel>
-                                        <TextBlock Text="Parámetros Modbus TCP" FontWeight="Bold"
+                                        <TextBlock Text="Configuración de Cliente" FontWeight="Bold"
                                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                                <Label Content="Dirección IP" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding IpAddress}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Margin="3,0">
-                                                <Label Content="Puerto TCP" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding TcpPort}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2" Margin="6,0,0,0">
-                                                <Label Content="Slave ID" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding ModbusSlaveId}" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Background="{StaticResource SurfaceDarkBrush}"
-                                        CornerRadius="6" Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Parámetros Modbus Generales" FontWeight="Bold"
-                                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                                <Label Content="Slave ID" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding ModbusSlaveId}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Margin="3,0">
-                                                <Label Content="Registro" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding ModbusRegister}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2" Margin="6,0,0,0">
-                                                <Label Content="Intervalo (ms)" Style="{StaticResource FormLabel}" />
-                                                <TextBox Text="{Binding ReadIntervalMs}" />
-                                            </StackPanel>
-                                        </Grid>
+                                        <Label Content="URL del Servidor" Style="{StaticResource FormLabel}" />
+                                        <TextBox Text="{Binding ServerUrl}" />
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -128,11 +245,7 @@
 
                         <WrapPanel Margin="0,0,0,12">
                             <Button Content="Guardar Configuración" Command="{Binding SaveConfigCommand}"
-                                    Style="{StaticResource SuccessButton}"
-                                    Margin="0,0,8,0" />
-                            <Button Content="Probar Conexión" Command="{Binding TestConnectionCommand}"
-                                    Style="{StaticResource PrimaryButton}"
-                                    Margin="0,0,8,0" />
+                                    Style="{StaticResource SuccessButton}" Margin="0,0,8,0" />
                             <Button Content="Recargar" Command="{Binding LoadConfigCommand}"
                                     Style="{StaticResource WarningButton}" />
                         </WrapPanel>
@@ -143,9 +256,11 @@
                 </ScrollViewer>
             </TabItem>
 
+            <!-- TAB: Respaldo -->
             <TabItem Header="Respaldo">
                 <views:BackupControl DataContext="{Binding BackupVM}" />
             </TabItem>
         </TabControl>
+
     </Grid>
 </UserControl>

@@ -26,6 +26,9 @@ public class WeighingRecord
     public WeighingStatus Status { get; set; } = WeighingStatus.WeighingIn;
     public string? PhotoPath { get; set; }
     public string? PhotoPathExit { get; set; }
+    public string? EntryScaleName { get; set; }
+    public string? ExitScaleName { get; set; }
+    public bool IsExitWeightManual { get; set; }
     public string Notes { get; set; } = "";
 
     public Product? Product { get; set; }
