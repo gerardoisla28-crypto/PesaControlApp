@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<Operator> Operators => Set<Operator>();
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<ScaleConfig> ScaleConfigs => Set<ScaleConfig>();
+    public DbSet<DvrConfig> DvrConfigs => Set<DvrConfig>();
 
     private readonly string _dbPath;
 
@@ -66,7 +67,7 @@ public class AppDbContext : DbContext
             entity.ToTable("Users");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Username).HasMaxLength(50).IsRequired();
-            entity.Property(e => e.Password).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.PasswordHash).HasMaxLength(512).IsRequired();
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Role).HasMaxLength(20).HasDefaultValue("Operator");
@@ -124,6 +125,23 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Url).HasMaxLength(500).IsRequired();
             entity.Property(e => e.Type).HasConversion<string>().HasMaxLength(10);
+            entity.Property(e => e.Subtype).HasDefaultValue(0);
+            entity.HasOne<DvrConfig>().WithMany().HasForeignKey(e => e.DvrConfigId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DvrConfig>(entity =>
+        {
+            entity.ToTable("DvrConfigs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Manufacturer).HasMaxLength(50).HasDefaultValue("Dahua");
+            entity.Property(e => e.Model).HasMaxLength(50).HasDefaultValue("DH-XVR1B04-I");
+            entity.Property(e => e.IpAddress).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.HttpPort).HasDefaultValue(80);
+            entity.Property(e => e.RtspPort).HasDefaultValue(554);
+            entity.Property(e => e.Username).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Password).HasMaxLength(100);
+            entity.Property(e => e.MaxChannels).HasDefaultValue(4);
         });
 
         modelBuilder.Entity<BarrierConfig>(entity =>

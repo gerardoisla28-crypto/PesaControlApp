@@ -43,7 +43,7 @@
                 <PasswordBox x:Name="txtPass" Height="38" FontSize="14" />
             </StackPanel>
 
-            <Button Content="Ingresar" Grid.Row="2" FontSize="15" FontWeight="Bold"
+            <Button x:Name="LoginButton" Content="Ingresar" Grid.Row="2" FontSize="15" FontWeight="Bold"
                     Padding="15,9"
                     Click="Login_Click"
                     Style="{StaticResource PrimaryButton}" Margin="0,66,0,26" Grid.RowSpan="2" />

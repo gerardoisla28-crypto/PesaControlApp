@@ -30,74 +30,82 @@
                     <TextBlock Text="Usuarios del Sistema" Style="{StaticResource SectionTitle}"
                                VerticalAlignment="Center" />
                     <WrapPanel Grid.Column="1">
-                        <Button Content="+ Nuevo" Command="{Binding NewUserCommand}"
-                                Style="{StaticResource SuccessButton}"
-                                Margin="0,0,6,0" />
-                        <Button Content="⟳" Command="{Binding LoadUsersCommand}"
+                        <Button Content="Configurar Usuarios" Command="{Binding ToggleEditorCommand}"
                                 Style="{StaticResource PrimaryButton}"
-                                ToolTip="Refrescar lista" />
+                                Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Style="{StaticResource StatusMessage}"
+                                   VerticalAlignment="Center" />
                     </WrapPanel>
                 </Grid>
             </Border>
 
             <!-- User list -->
             <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="4">
-                <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding Users}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border CornerRadius="6" Padding="12"
-                                        Margin="0,0,0,4"
-                                        Background="{StaticResource SurfaceMidBrush}"
-                                        Cursor="Hand">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsActive}" Value="False">
-                                                    <Setter Property="Opacity" Value="0.45" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border CornerRadius="4" Width="36" Height="36"
-                                                Background="{StaticResource AccentBlueBrush}"
+                <ListBox ItemsSource="{Binding Users}"
+                         SelectedItem="{Binding SelectedUser}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="6" Padding="12"
+                                    Margin="0,0,0,4"
+                                    Background="{StaticResource SurfaceMidBrush}"
+                                    Cursor="Hand">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                <Setter Property="Opacity" Value="0.45" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border CornerRadius="4" Width="36" Height="36"
+                                            Background="{StaticResource AccentBlueBrush}"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="👤" FontSize="16"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0"
                                                 VerticalAlignment="Center">
-                                            <TextBlock Text="👤" FontSize="16"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel Grid.Column="1" Margin="10,0,0,0"
-                                                    VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Username}"
-                                                       FontWeight="Bold" FontSize="14" />
-                                            <TextBlock Text="{Binding FullName}"
-                                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                                       FontSize="12" />
-                                        </StackPanel>
-                                        <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
-                                                Background="{StaticResource SurfaceLightBrush}"
-                                                VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Role}"
-                                                       FontSize="11"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </Border>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                                        <TextBlock Text="{Binding Username}"
+                                                   FontWeight="Bold" FontSize="14" />
+                                        <TextBlock Text="{Binding FullName}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   FontSize="12" />
+                                    </StackPanel>
+                                    <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
+                                            Background="{StaticResource SurfaceLightBrush}"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Role}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Border>
 
-            <!-- Status -->
-            <TextBlock Grid.Row="2" Text="{Binding StatusMessage}"
-                       Style="{StaticResource StatusMessage}" />
         </Grid>
 
         <!-- SEPARATOR -->
@@ -139,8 +147,8 @@
                           Margin="0,0,0,8" />
 
                 <Label Content="Contraseña" Style="{StaticResource FormLabel}" />
-                <TextBox Text="{Binding EditPassword}" Margin="0,0,0,8"
-                         ToolTip="Dejar vacío para mantener la actual (al editar)" />
+                <PasswordBox Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
+                             ToolTip="Entre 14 y 128 caracteres. Dejar vacío para mantener la actual al editar." />
 
                 <CheckBox Content="Usuario activo"
                           IsChecked="{Binding EditIsActive}"

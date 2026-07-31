@@ -80,15 +80,15 @@
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                     </StackPanel>
 
+                </WrapPanel>
+
+                <WrapPanel>
                     <Button Content="Buscar" Command="{Binding SearchCommand}"
                             Style="{StaticResource PrimaryButton}" Margin="0,0,4,0" />
                     <Button Content="Limpiar" Command="{Binding ClearFiltersCommand}"
                             Style="{StaticResource WarningButton}" Margin="0,0,4,0" />
-                </WrapPanel>
-
-                <WrapPanel>
                     <Button Content="Imprimir" Command="{Binding PrintTicketCommand}"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,4,4" />
+                            Style="{StaticResource PrimaryButton}" Margin="0,0,4,0" />
                     <TextBlock Text="{Binding StatusMessage}"
                                Style="{StaticResource StatusMessage}" VerticalAlignment="Center" />
                 </WrapPanel>

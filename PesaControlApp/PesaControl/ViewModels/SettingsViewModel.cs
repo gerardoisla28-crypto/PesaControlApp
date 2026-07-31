@@ -102,6 +102,7 @@ public partial class SettingsViewModel : ObservableObject
             ProtocolType.ModbusTcp => "Modbus TCP",
             ProtocolType.ModbusRtu => "Modbus RTU",
             ProtocolType.Sensoc => "Sensoc",
+            ProtocolType.SensocarA12 => "Sensocar A12",
             _ => "Serial"
         };
         IsScaleEditorOpen = true;
@@ -169,7 +170,7 @@ public partial class SettingsViewModel : ObservableObject
 
     // ── Protocol params (legacy - for editing single scale) ──
     [ObservableProperty] private string _selectedProtocolName = "Serial";
-    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc"];
+    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc", "Sensocar A12"];
 
     [ObservableProperty] private int _serialBaudRate = 9600;
     [ObservableProperty] private int _serialParity;
@@ -241,7 +242,7 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    public bool IsSerialProtocol => SelectedProtocolName is "Serial" or "Modbus RTU" or "Sensoc";
+    public bool IsSerialProtocol => SelectedProtocolName is "Serial" or "Modbus RTU" or "Sensoc" or "Sensocar A12";
     public bool IsTcpProtocol => SelectedProtocolName == "Modbus TCP";
 
     partial void OnSelectedProtocolNameChanged(string value)
@@ -254,6 +255,7 @@ public partial class SettingsViewModel : ObservableObject
                 "Modbus TCP" => ProtocolType.ModbusTcp,
                 "Modbus RTU" => ProtocolType.ModbusRtu,
                 "Sensoc" => ProtocolType.Sensoc,
+                "Sensocar A12" => ProtocolType.SensocarA12,
                 _ => ProtocolType.Serial
             };
     }
@@ -276,6 +278,7 @@ public partial class SettingsViewModel : ObservableObject
                     "Modbus TCP" => ProtocolType.ModbusTcp,
                     "Modbus RTU" => ProtocolType.ModbusRtu,
                     "Sensoc" => ProtocolType.Sensoc,
+                    "Sensocar A12" => ProtocolType.SensocarA12,
                     _ => ProtocolType.Serial
                 },
                 PortName = EditingScale?.PortName ?? "COM1",
@@ -295,13 +298,14 @@ public partial class SettingsViewModel : ObservableObject
                 "Modbus TCP" => new ModbusTcpProtocol(),
                 "Modbus RTU" => new ModbusRtuProtocol(),
                 "Sensoc" => new SensocProtocol(),
+                "Sensocar A12" => new SensocarA12Protocol(),
                 _ => new SerialProtocol()
             };
 
             var service = new WeighingService(protocol, config);
             await service.ConnectAsync();
 
-            if (protocolName == "Sensoc")
+            if (protocolName is "Sensoc" or "Sensocar A12")
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 WeightReading? reading = null;

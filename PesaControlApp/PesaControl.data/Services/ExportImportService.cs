@@ -5,12 +5,14 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PesaControl.Core.Models;
 using PesaControl.Data.Data;
+using PesaControl.Core.Security;
 
 namespace PesaControl.Data.Services;
 
 public class ExportImportService
 {
     private readonly DatabaseService _db;
+    private readonly IPasswordHasher _passwordHasher = new Argon2idPasswordHasher();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -180,6 +182,14 @@ public class ExportImportService
 
             if (package.Users.Count > 0)
             {
+                foreach (var user in package.Users)
+                {
+                    if (string.IsNullOrWhiteSpace(user.PasswordHash) && !string.IsNullOrWhiteSpace(user.LegacyPassword))
+                        user.PasswordHash = _passwordHasher.Hash(user.LegacyPassword);
+                    user.LegacyPassword = null;
+                    if (string.IsNullOrWhiteSpace(user.PasswordHash))
+                        throw new InvalidDataException($"El usuario '{user.Username}' no contiene una contraseña válida.");
+                }
                 context.Users.AddRange(package.Users);
                 await context.SaveChangesAsync();
             }

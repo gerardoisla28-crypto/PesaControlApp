@@ -15,12 +15,31 @@ public partial class MainWindow : Window
         InitializeComponent();
         _dbService = new DatabaseService();
         _authService = new AuthService(_dbService);
+        LoginButton.IsEnabled = false;
         _ = InitializeDatabaseAsync();
     }
 
     private async Task InitializeDatabaseAsync()
     {
-        await _dbService.InitializeAsync();
+        try
+        {
+            await _dbService.InitializeAsync();
+            if (!await _dbService.HasAdminAsync())
+            {
+                var setup = new InitialAdminWindow(_dbService) { Owner = this };
+                if (setup.ShowDialog() != true || !setup.Completed)
+                {
+                    Close();
+                    return;
+                }
+            }
+            LoginButton.IsEnabled = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"No se pudo inicializar la base de datos: {ex.Message}", "PesaControl", MessageBoxButton.OK, MessageBoxImage.Error);
+            Close();
+        }
     }
 
     private async void Login_Click(object sender, RoutedEventArgs e)

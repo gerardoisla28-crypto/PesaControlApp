@@ -121,6 +121,7 @@ public class ScaleManager : IDisposable
             ProtocolType.ModbusTcp => new ModbusTcpProtocol(),
             ProtocolType.ModbusRtu => new ModbusRtuProtocol(),
             ProtocolType.Sensoc => new SensocProtocol(),
+            ProtocolType.SensocarA12 => new SensocarA12Protocol(),
             _ => new SerialProtocol()
         };
     }

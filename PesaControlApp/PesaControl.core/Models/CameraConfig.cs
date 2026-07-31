@@ -14,4 +14,8 @@ public class CameraConfig
     public string Url { get; set; } = "";
     public CameraType Type { get; set; } = CameraType.RTSP;
     public bool IsActive { get; set; } = true;
+
+    public int? DvrConfigId { get; set; }
+    public int? ChannelNumber { get; set; }
+    public int Subtype { get; set; }
 }

@@ -15,7 +15,7 @@ public partial class DashboardViewModel : ObservableObject
     private string _currentSection = "Pesaje";
 
     public User CurrentUser { get; }
-    public bool IsAdmin => CurrentUser.Role == "Admin";
+    public bool IsAdmin => UserRoles.CanManageUsers(CurrentUser.Role);
 
     public WeighingViewModel? WeighingVM { get; set; }
     public CameraViewModel? CameraVM { get; set; }

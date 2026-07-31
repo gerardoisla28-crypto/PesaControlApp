@@ -4,12 +4,15 @@ using CommunityToolkit.Mvvm.Input;
 using PesaControl.Core.Models;
 using PesaControl.Data.Data;
 using PesaControl.Data.Repositories;
+using PesaControl.Core.Security;
 
 namespace PesaControl.UI.ViewModels;
 
 public partial class UsersViewModel : ObservableObject
 {
     private readonly DatabaseService _db;
+    private readonly User _currentUser;
+    private readonly IPasswordHasher _passwordHasher = new Argon2idPasswordHasher();
 
     public ObservableCollection<User> Users { get; } = [];
 
@@ -27,11 +30,15 @@ public partial class UsersViewModel : ObservableObject
 
     [ObservableProperty] private string _statusMessage = "";
 
-    public List<string> Roles { get; } = ["Admin", "Operator", "Viewer"];
+    public List<string> Roles { get; }
 
-    public UsersViewModel(DatabaseService db)
+    public UsersViewModel(DatabaseService db, User currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
+        Roles = currentUser.Role == UserRoles.SuperAdmin
+            ? [UserRoles.SuperAdmin, UserRoles.Admin, UserRoles.Operator, UserRoles.Viewer]
+            : [UserRoles.Operator, UserRoles.Viewer];
     }
 
     [RelayCommand]
@@ -59,6 +66,7 @@ public partial class UsersViewModel : ObservableObject
     [RelayCommand]
     private void NewUser()
     {
+        if (!UserRoles.CanManageUsers(_currentUser.Role)) return;
         SelectedUser = null;
         EditUsername = "";
         EditFullName = "";
@@ -74,6 +82,11 @@ public partial class UsersViewModel : ObservableObject
     private void EditUser()
     {
         if (SelectedUser is null) return;
+        if (!UserRoles.CanManageRole(_currentUser.Role, SelectedUser.Role))
+        {
+            StatusMessage = "No tiene permisos para administrar este usuario";
+            return;
+        }
 
         EditUsername = SelectedUser.Username;
         EditFullName = SelectedUser.FullName;
@@ -93,6 +106,16 @@ public partial class UsersViewModel : ObservableObject
             StatusMessage = "El nombre de usuario es obligatorio";
             return;
         }
+        if (!Roles.Contains(EditRole))
+        {
+            StatusMessage = "No tiene permisos para asignar ese rol";
+            return;
+        }
+        if ((!IsEditing || !string.IsNullOrWhiteSpace(EditPassword)) && !IsValidPassword(EditPassword))
+        {
+            StatusMessage = "La contraseña debe tener entre 14 y 128 caracteres";
+            return;
+        }
 
         try
         {
@@ -101,6 +124,11 @@ public partial class UsersViewModel : ObservableObject
 
             if (IsEditing && SelectedUser is not null)
             {
+                if (!UserRoles.CanManageRole(_currentUser.Role, SelectedUser.Role))
+                {
+                    StatusMessage = "No tiene permisos para administrar este usuario";
+                    return;
+                }
                 SelectedUser.Username = EditUsername;
                 SelectedUser.FullName = EditFullName;
                 SelectedUser.Email = EditEmail;
@@ -108,7 +136,7 @@ public partial class UsersViewModel : ObservableObject
                 SelectedUser.IsActive = EditIsActive;
 
                 if (!string.IsNullOrWhiteSpace(EditPassword))
-                    SelectedUser.Password = EditPassword;
+                    SelectedUser.PasswordHash = _passwordHasher.Hash(EditPassword);
 
                 await repo.UpdateAsync(SelectedUser);
                 StatusMessage = "Usuario actualizado correctamente";
@@ -127,7 +155,7 @@ public partial class UsersViewModel : ObservableObject
                     Username = EditUsername,
                     FullName = EditFullName,
                     Email = EditEmail,
-                    Password = string.IsNullOrWhiteSpace(EditPassword) ? "1234" : EditPassword,
+                    PasswordHash = _passwordHasher.Hash(EditPassword),
                     Role = EditRole,
                     IsActive = EditIsActive,
                     CreatedAt = DateTime.UtcNow
@@ -148,6 +176,23 @@ public partial class UsersViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleEditor()
+    {
+        if (IsEditorOpen)
+        {
+            IsEditorOpen = false;
+            SelectedUser = null;
+        }
+        else
+        {
+            if (SelectedUser is not null)
+                EditUser();
+            else
+                NewUser();
+        }
+    }
+
+    [RelayCommand]
     private void CancelEdit()
     {
         IsEditorOpen = false;
@@ -158,6 +203,11 @@ public partial class UsersViewModel : ObservableObject
     private async Task DeleteUserAsync()
     {
         if (SelectedUser is null) return;
+        if (!UserRoles.CanManageRole(_currentUser.Role, SelectedUser.Role))
+        {
+            StatusMessage = "No tiene permisos para eliminar este usuario";
+            return;
+        }
 
         try
         {
@@ -184,9 +234,9 @@ public partial class UsersViewModel : ObservableObject
 
     partial void OnSelectedUserChanged(User? value)
     {
-        if (value is not null && !IsEditorOpen)
-        {
-            EditUserCommand.Execute(null);
-        }
+        if (value is not null)
+            StatusMessage = $"Seleccionado: {value.Username}";
     }
+
+    private static bool IsValidPassword(string password) => password.Length is >= 14 and <= 128;
 }

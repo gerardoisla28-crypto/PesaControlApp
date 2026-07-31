@@ -2,4 +2,5 @@
   <Project Path="../PesaControl.core/PesaControl.Core.csproj" />
   <Project Path="../PesaControl.data/PesaControl.Data.csproj" />
   <Project Path="PesaControl.UI.csproj" />
+  <Project Path="../PesaControl.Provisioner/PesaControl.Provisioner.csproj" />
 </Solution>

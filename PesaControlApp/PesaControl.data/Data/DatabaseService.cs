@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using PesaControl.Core.Models;
+using PesaControl.Core.Security;
 
 namespace PesaControl.Data.Data;
 
 public class DatabaseService
 {
     private readonly string _dbPath;
+    private readonly IPasswordHasher _passwordHasher = new Argon2idPasswordHasher();
 
     public DatabaseService()
     {
@@ -21,6 +23,50 @@ public class DatabaseService
     {
         using var context = CreateContext();
         await context.Database.EnsureCreatedAsync();
+
+        await MigrateUserPasswordsAsync(context);
+
+        await EnsureLegacyRawSqlAsync(context);
+
+        await context.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS DvrConfigs (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                Manufacturer TEXT NOT NULL DEFAULT 'Dahua',
+                Model TEXT NOT NULL DEFAULT 'DH-XVR1B04-I',
+                IpAddress TEXT NOT NULL,
+                HttpPort INTEGER NOT NULL DEFAULT 80,
+                RtspPort INTEGER NOT NULL DEFAULT 554,
+                Username TEXT NOT NULL,
+                Password TEXT,
+                MaxChannels INTEGER NOT NULL DEFAULT 4,
+                IsActive INTEGER NOT NULL DEFAULT 1
+            )");
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE CameraConfigs ADD COLUMN DvrConfigId INTEGER NULL REFERENCES DvrConfigs(Id)");
+        }
+        catch { }
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE CameraConfigs ADD COLUMN ChannelNumber INTEGER NULL");
+        }
+        catch { }
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE CameraConfigs ADD COLUMN Subtype INTEGER NOT NULL DEFAULT 0");
+        }
+        catch { }
+
+        await MigrateLegacyScaleConfigAsync(context);
+        await SeedAsync(context);
+    }
+
+    private async Task EnsureLegacyRawSqlAsync(AppDbContext context)
+    {
         await context.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS Drivers (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,10 +81,7 @@ public class DatabaseService
             await context.Database.ExecuteSqlRawAsync(@"
                 ALTER TABLE WeighingRecords ADD COLUMN PhotoPathExit TEXT NULL");
         }
-        catch
-        {
-            // Column already exists — ignore
-        }
+        catch { }
         try
         {
             await context.Database.ExecuteSqlRawAsync(@"
@@ -75,11 +118,82 @@ public class DatabaseService
                 RegisterAddress INTEGER NOT NULL DEFAULT 0,
                 ReadIntervalMs INTEGER NOT NULL DEFAULT 200
             )");
-        await MigrateLegacyScaleConfigAsync(context);
-        await SeedAsync(context);
     }
 
     public AppDbContext CreateContext() => new(_dbPath);
+
+    public async Task<bool> HasAdminAsync()
+    {
+        await using var context = CreateContext();
+        return await context.Users.AnyAsync(u => u.Role == UserRoles.Admin);
+    }
+
+    public async Task CreateInitialAdminAsync(string username, string password, string fullName = "")
+    {
+        ValidateCredentials(username, password);
+        await using var context = CreateContext();
+        if (await context.Users.AnyAsync(u => u.Role == UserRoles.Admin))
+            throw new InvalidOperationException("Ya existe un administrador de cliente.");
+        if (await context.Users.AnyAsync(u => u.Username == username))
+            throw new InvalidOperationException("Ya existe un usuario con ese nombre.");
+
+        context.Users.Add(new User { Username = username, FullName = fullName, Role = UserRoles.Admin,
+            PasswordHash = _passwordHasher.Hash(password), IsActive = true, CreatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+    }
+
+    public async Task ProvisionSuperAdminAsync(string username, string password, string fullName = "")
+    {
+        ValidateCredentials(username, password);
+        await using var context = CreateContext();
+        if (await context.Users.AnyAsync(u => u.Role == UserRoles.SuperAdmin))
+            throw new InvalidOperationException("Ya existe un superadministrador. Use el procedimiento de restablecimiento autorizado.");
+        if (await context.Users.AnyAsync(u => u.Username == username))
+            throw new InvalidOperationException("Ya existe un usuario con ese nombre.");
+
+        context.Users.Add(new User { Username = username, FullName = fullName, Role = UserRoles.SuperAdmin,
+            PasswordHash = _passwordHasher.Hash(password), IsActive = true, CreatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+    }
+
+    private async Task MigrateUserPasswordsAsync(AppDbContext context)
+    {
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN PasswordHash TEXT NULL"); }
+        catch { /* New databases already have the column. */ }
+
+        var legacyUsers = new List<(int Id, string Password)>();
+        await using var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT Id, Password FROM Users WHERE (PasswordHash IS NULL OR PasswordHash = '') AND Password <> ''";
+            try
+            {
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync()) legacyUsers.Add((reader.GetInt32(0), reader.GetString(1)));
+            }
+            catch { return; } // No legacy Password column in a newly-created database.
+        }
+
+        if (legacyUsers.Count == 0) return;
+        await using var transaction = await connection.BeginTransactionAsync();
+        foreach (var (id, password) in legacyUsers)
+        {
+            await using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = "UPDATE Users SET PasswordHash = $hash, Password = '' WHERE Id = $id";
+            var hash = update.CreateParameter(); hash.ParameterName = "$hash"; hash.Value = _passwordHasher.Hash(password); update.Parameters.Add(hash);
+            var key = update.CreateParameter(); key.ParameterName = "$id"; key.Value = id; update.Parameters.Add(key);
+            await update.ExecuteNonQueryAsync();
+        }
+        await transaction.CommitAsync();
+    }
+
+    private static void ValidateCredentials(string username, string password)
+    {
+        if (string.IsNullOrWhiteSpace(username)) throw new ArgumentException("El nombre de usuario es obligatorio.");
+        if (password.Length is < 14 or > 128) throw new ArgumentException("La contraseña debe tener entre 14 y 128 caracteres.");
+    }
 
     private async Task SeedAsync(AppDbContext context)
     {
@@ -88,17 +202,6 @@ public class DatabaseService
             await SeedMissingAsync(context);
             return;
         }
-
-        context.Users.Add(new User
-        {
-            Username = "admin",
-            Password = "1234",
-            FullName = "Administrador",
-            Email = "admin@pesacontrol.cl",
-            Role = "Admin",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        });
 
         context.Products.AddRange(
             new Product { Name = "Áridos", IsActive = true },

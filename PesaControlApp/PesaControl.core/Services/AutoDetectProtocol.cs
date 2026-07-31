@@ -24,7 +24,8 @@ public class AutoDetectProtocol : IWeighingProtocol, IDisposable
         [
             (new SerialProtocol(), "Serial"),
             (new ModbusTcpProtocol(), "Modbus TCP"),
-            (new ModbusRtuProtocol(), "Modbus RTU")
+            (new ModbusRtuProtocol(), "Modbus RTU"),
+            (new SensocarA12Protocol(), "Sensocar A12")
         ];
     }
 

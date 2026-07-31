@@ -39,10 +39,21 @@ public partial class DashboardWindow : Window
         TryWireSharedArduinoService(dbService, barrierVm, trafficLightVm);
 
         var registrosVm = new RegistrosViewModel(dbService);
-        var usersVm = new UsersViewModel(dbService);
+        var usersVm = new UsersViewModel(dbService, currentUser);
         var controlsVm = new ControlsViewModel(dbService, barrierVm, trafficLightVm);
         var settingsVm = new SettingsViewModel(dbService, _scaleManager, weighingVm, exportImport);
         var catalogsVm = new CatalogsViewModel(dbService);
+
+        var configCtx = dbService.CreateContext();
+        var configRepo = new Repository<SystemConfig>(configCtx);
+        var sysConfigs = configRepo.GetAllAsync().GetAwaiter().GetResult();
+        var sysDict = sysConfigs.ToDictionary(c => c.Key, c => c.Value);
+        var apiKey = sysDict.GetValueOrDefault("platerecognizer_api_key", "");
+        IAnprService? anprService = string.IsNullOrWhiteSpace(apiKey)
+            ? null
+            : new PlateRecognizerAnprService(apiKey);
+
+        var dvrService = new DahuaDvrService();
 
         _dashboardVm = new DashboardViewModel(currentUser)
         {
@@ -58,7 +69,7 @@ public partial class DashboardWindow : Window
 
         DataContext = _dashboardVm;
 
-        _ = InitializeCameraAsync(dbService, weighingVm, controlsVm);
+        _ = InitializeCameraAsync(dbService, weighingVm, controlsVm, anprService, dvrService);
         _ = _dashboardVm.LoadModuleConfigAsync(dbService);
     }
 
@@ -102,22 +113,12 @@ public partial class DashboardWindow : Window
         }
     }
 
-    private async Task InitializeCameraAsync(DatabaseService dbService, WeighingViewModel weighingVm, ControlsViewModel controlsVm)
+    private async Task InitializeCameraAsync(DatabaseService dbService, WeighingViewModel weighingVm, ControlsViewModel controlsVm, IAnprService? anprService, IDvrService dvrService)
     {
-        var configCtx = dbService.CreateContext();
-        var configRepo = new Repository<SystemConfig>(configCtx);
-        var configs = await configRepo.GetAllAsync();
-        var dict = configs.ToDictionary(c => c.Key, c => c.Value);
-        var apiKey = dict.GetValueOrDefault("platerecognizer_api_key", "");
-
         var cameraService = new CameraService();
-        IAnprService? anprService = string.IsNullOrWhiteSpace(apiKey)
-            ? null
-            : new PlateRecognizerAnprService(apiKey);
-
         weighingVm.SetCameraService(cameraService);
 
-        var cameraVm = new CameraViewModel(cameraService, anprService, dbService);
+        var cameraVm = new CameraViewModel(cameraService, dvrService, anprService, dbService);
 
         cameraVm.PlateDetected += (_, plate) =>
         {
