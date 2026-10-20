@@ -33,8 +33,12 @@ public class AppDbContext : DbContext
     // Las fechas se guardan como hora local sin zona, igual que antes con SQLite.
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTime>().HaveColumnType("timestamp without time zone");
-        configurationBuilder.Properties<DateTime?>().HaveColumnType("timestamp without time zone");
+        configurationBuilder.Properties<DateTime>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<LocalDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<LocalDateTimeConverter>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
