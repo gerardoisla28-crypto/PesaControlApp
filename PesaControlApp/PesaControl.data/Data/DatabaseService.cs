@@ -37,7 +37,7 @@ public class DatabaseService
 
     public async Task CreateInitialAdminAsync(string username, string password, string fullName = "")
     {
-        ValidateCredentials(username, password);
+        ValidateCredentials(UserRoles.Admin, username, password);
         await using var context = CreateContext();
         if (await context.Users.AnyAsync(u => u.Role == UserRoles.Admin))
             throw new InvalidOperationException("Ya existe un administrador de cliente.");
@@ -51,7 +51,7 @@ public class DatabaseService
 
     public async Task ProvisionSuperAdminAsync(string username, string password, string fullName = "")
     {
-        ValidateCredentials(username, password);
+        ValidateCredentials(UserRoles.SuperAdmin, username, password);
         await using var context = CreateContext();
         if (await context.Users.AnyAsync(u => u.Role == UserRoles.SuperAdmin))
             throw new InvalidOperationException("Ya existe un superadministrador. Use el procedimiento de restablecimiento autorizado.");
@@ -63,10 +63,10 @@ public class DatabaseService
         await context.SaveChangesAsync();
     }
 
-    private static void ValidateCredentials(string username, string password)
+    private static void ValidateCredentials(string role, string username, string password)
     {
-        if (string.IsNullOrWhiteSpace(username)) throw new ArgumentException("El nombre de usuario es obligatorio.");
-        if (password.Length is < 14 or > 128) throw new ArgumentException("La contraseña debe tener entre 14 y 128 caracteres.");
+        if (!UsernamePolicy.IsValid(username)) throw new ArgumentException(UsernamePolicy.Describe());
+        if (!PasswordPolicy.IsValid(role, password)) throw new ArgumentException(PasswordPolicy.Describe(role));
     }
 
     private async Task SeedAsync(AppDbContext context)
