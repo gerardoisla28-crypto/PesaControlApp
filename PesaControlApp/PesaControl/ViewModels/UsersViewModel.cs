@@ -25,6 +25,7 @@ public partial class UsersViewModel : ObservableObject
     [ObservableProperty] private string _editFullName = "";
     [ObservableProperty] private string _editEmail = "";
     [ObservableProperty] private string _editPassword = "";
+    [ObservableProperty] private string _editPasswordConfirm = "";
     [ObservableProperty] private string _editRole = "Operator";
     [ObservableProperty] private bool _editIsActive = true;
 
@@ -72,6 +73,7 @@ public partial class UsersViewModel : ObservableObject
         EditFullName = "";
         EditEmail = "";
         EditPassword = "";
+        EditPasswordConfirm = "";
         EditRole = "Operator";
         EditIsActive = true;
         IsEditing = false;
@@ -92,6 +94,7 @@ public partial class UsersViewModel : ObservableObject
         EditFullName = SelectedUser.FullName;
         EditEmail = SelectedUser.Email;
         EditPassword = "";
+        EditPasswordConfirm = "";
         EditRole = SelectedUser.Role;
         EditIsActive = SelectedUser.IsActive;
         IsEditing = true;
@@ -101,9 +104,17 @@ public partial class UsersViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveUserAsync()
     {
-        if (string.IsNullOrWhiteSpace(EditUsername))
+        EditUsername = EditUsername.Trim();
+        var usernameChanged = !IsEditing || SelectedUser is null || EditUsername != SelectedUser.Username;
+        if (usernameChanged && !UsernamePolicy.IsValid(EditUsername))
         {
-            StatusMessage = "El nombre de usuario es obligatorio";
+            StatusMessage = UsernamePolicy.Describe();
+            return;
+        }
+        EditFullName = FullNamePolicy.Normalize(EditFullName);
+        if (FullNamePolicy.IsTooLong(EditFullName))
+        {
+            StatusMessage = FullNamePolicy.DescribeTooLong();
             return;
         }
         if (!Roles.Contains(EditRole))
@@ -111,9 +122,14 @@ public partial class UsersViewModel : ObservableObject
             StatusMessage = "No tiene permisos para asignar ese rol";
             return;
         }
-        if ((!IsEditing || !string.IsNullOrWhiteSpace(EditPassword)) && !IsValidPassword(EditPassword))
+        if ((!IsEditing || !string.IsNullOrWhiteSpace(EditPassword)) && !PasswordPolicy.IsValid(EditRole, EditPassword))
         {
-            StatusMessage = "La contraseña debe tener entre 14 y 128 caracteres";
+            StatusMessage = PasswordPolicy.Describe(EditRole);
+            return;
+        }
+        if ((!IsEditing || !string.IsNullOrWhiteSpace(EditPassword)) && EditPassword != EditPasswordConfirm)
+        {
+            StatusMessage = "Las contraseñas no coinciden";
             return;
         }
 
@@ -238,5 +254,4 @@ public partial class UsersViewModel : ObservableObject
             StatusMessage = $"Seleccionado: {value.Username}";
     }
 
-    private static bool IsValidPassword(string password) => password.Length is >= 14 and <= 128;
 }
