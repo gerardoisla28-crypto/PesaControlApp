@@ -10,6 +10,7 @@ public partial class InitialAdminWindow : Window
 {
     private readonly DatabaseService _database;
     public bool Completed { get; private set; }
+    public string? CreatedUsername { get; private set; }
 
     public InitialAdminWindow(DatabaseService database)
     {
@@ -52,6 +53,7 @@ public partial class InitialAdminWindow : Window
         {
             await _database.CreateInitialAdminAsync(username, PasswordBox.Password, fullName);
             Completed = true;
+            CreatedUsername = username;
             DialogResult = true;
         }
         catch (Exception ex)
