@@ -4,27 +4,62 @@ Objetivo: dejar PesaControl terminado y estable para empezar a venderlo, tomando
 
 > Basado en la estructura de archivos y búsquedas puntuales (`EnsureCreated`, cadena de conexión SQLite, `catch` genéricos). No es una auditoría completa: validar cada punto antes de ejecutarlo.
 
+## Decisiones tomadas
+
+- **Multi-puesto desde el inicio**: varios puestos de pesaje comparten los mismos registros.
+- **Motor de base de datos: PostgreSQL** (reemplaza a SQLite). Sin límite práctico de tamaño y sin costo de licencia.
+- **Fotos de cámaras: archivos en una carpeta compartida del servidor**, no dentro de la base. La base guarda la ruta relativa.
+- **El servidor puede ser un PC normal** del cliente (siempre encendido, IP fija). Ver [REQUISITOS_CLIENTE.md](REQUISITOS_CLIENTE.md).
+- **Dos modos de instalación**: "servidor + puesto" y "solo puesto".
+
+## Decisiones pendientes
+
+- **¿Guardar las fotos en un servidor en la nube?** Por ahora se usa la carpeta compartida local. Revisar más adelante como opción adicional. A considerar: dependencia de internet en los puestos, costo mensual de almacenamiento, seguridad del servicio expuesto y responsabilidad sobre los datos de todos los clientes.
+
+## Multi-puesto (nuevo, implica cambios en el código)
+
+Estado actual: las fotos se guardan en `%LocalAppData%\PesaControl\Photos` con ruta absoluta (`WeighingViewModel.cs:562`), por lo que otro puesto no las ve.
+
+- [ ] Cambiar `PhotoPath` y `PhotoPathExit` a rutas **relativas** (p. ej. `2026/10/T-1234-entry.jpg`) con carpeta raíz configurable.
+- [ ] Organizar las fotos por año y mes.
+- [ ] Si la red falla, guardar la foto en local y subirla después.
+- [ ] Quitar el `catch { }` vacío al guardar fotos: hoy un fallo pasa desapercibido.
+- [ ] Separar la **configuración por puesto** (báscula, puerto serie, cámaras, impresora) de la configuración compartida.
+- [ ] Numeración de tickets sin duplicados entre puestos.
+- [ ] Control de concurrencia: dos puestos editando o cerrando el mismo ticket.
+- [ ] Definir qué hace un puesto sin conexión al servidor (bloquear o permitir pesar sin conexión).
+- [ ] Registrar en la auditoría desde qué puesto se hizo cada acción.
+- [ ] Respaldos en el servidor, de la base y de las fotos por separado.
+- [ ] Política de retención de fotos.
+- [ ] Pantalla de primer arranque con los modos "servidor + puesto" y "solo puesto" (dirección del servidor y carpeta de fotos).
+
 ## A. Cambios que pueden romper el proyecto actual
 
 Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada uno. Ordenados de mayor a menor riesgo.
 
-### 1. Pasar de `EnsureCreated` a migraciones EF puras
+### 1. Migrar a PostgreSQL con migraciones EF puras
 - Archivos: `PesaControl.data/Data/DatabaseService.cs:25`, `PesaControl.data/Services/ExportImportService.cs:146`.
-- Riesgo: una base creada con `EnsureCreated` no tiene `__EFMigrationsHistory`. Activar `Migrate()` sin más intentará recrear tablas existentes y fallará.
-- Hoy hay una sola migración (`AddDvrSupport`) y ajustes manuales (`MigrateLegacyScaleConfigAsync`).
-- Plan:
-  - Crear una migración baseline.
-  - Detectar bases existentes e insertar la baseline en el historial a mano.
-  - Mover los ajustes manuales a migraciones.
-- Es el cambio más importante: sin él no se pueden actualizar clientes con datos.
+- Hoy: SQLite con `EnsureCreated`, una sola migración (`AddDvrSupport`) y ajustes manuales (`MigrateLegacyScaleConfigAsync`, SQL crudo tipo `ALTER TABLE ... TEXT`).
+- No hay clientes con datos, así que **no hace falta detectar bases existentes ni insertar baseline a mano**. Basta con:
+  - Cambiar el proveedor a Npgsql (PostgreSQL).
+  - Borrar las migraciones actuales y generar una migración inicial limpia que incluya el esquema completo, absorbiendo `AddDvrSupport` y los ajustes manuales.
+  - Reemplazar `EnsureCreated` por `Migrate()`.
+  - Revisar SQL crudo y tipos específicos de SQLite (`TEXT`, `BLOB`).
+- Revisar `ExportImportService` (importa/exporta con rutas de fotos y base local).
+- Es el cambio más importante: sin migraciones no se pueden actualizar clientes con datos.
+- Hacerlo en una rama de git; las bases SQLite de desarrollo se descartan.
 
-### 2. Cifrar la base de datos (SQLCipher)
-- Riesgo: la clave tiene que venir de algún lado; una base sin cifrar no se abre con clave, hay que migrar los datos a un archivo nuevo cifrado. Si se pierde la clave, se pierden los datos.
-- Requiere `SQLitePCLRaw.bundle_e_sqlcipher` en lugar del provider actual de EF Core.
-- Decidir si la clave se deriva del HWID (queda atada a la licencia).
+### 2. Seguridad de la base de datos (reemplaza a SQLCipher)
+- SQLCipher solo aplica a SQLite, por lo que se descarta.
+- Usuario de base propio con contraseña fuerte (no `postgres`), generada por el instalador.
+- Conexión solo desde la red local; no exponer el puerto a internet.
+- Cadena de conexión protegida (DPAPI), no en texto plano.
+- Conexión TLS si hay varios puestos en red.
+- Respaldos cifrados o en ubicación con acceso restringido.
 
 ### 3. Sistema de licencias con HWID
 - Riesgo: si el bloqueo falla (cambio de disco o placa), un cliente pagado queda fuera.
+- Con multi-puesto hay que decidir si se licencia por puesto, por servidor o por número de puestos.
 - Necesita:
   - Generador de claves aparte (herramienta propia, nunca incluida en el instalador).
   - Periodo de gracia.
@@ -68,6 +103,15 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] Reportes por folio y fechas; añadir exportación a Word (Excel y PDF ya existen).
 - [ ] Control de contraseña reutilizable.
 
+### Opcional
+- [ ] **Importación de catálogos desde Excel/CSV con plantilla**, para clientes que vienen de otro software de pesaje y quieren cargar sus maestros (transportistas, clientes, lugares, vehículos, productos).
+  - Ofrecer una plantilla descargable por catálogo, con columnas fijas y ejemplos.
+  - Validar antes de importar: columnas requeridas, duplicados, formatos (patentes, RUT u otros identificadores) y mostrar una vista previa con errores por fila.
+  - Importación transaccional: o entra todo o no entra nada; opción de omitir o actualizar duplicados.
+  - Registrar la importación en la auditoría.
+  - Alcance: solo catálogos. No leer bases de otros programas ni importar historial de pesajes.
+  - Reutilizar lo que ya exista en `ExportImportService` y las librerías de Excel/CSV del proyecto.
+
 ### Calidad
 - [ ] Quitar código ambiguo (p. ej. mención a PaddleOCR en `PlateRecord.Source` sin implementación).
 - [ ] Dejar `SerialTest` fuera del instalador y documentado.
@@ -76,9 +120,10 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 
 ## Orden de trabajo sugerido
 
-1. Respaldo y baseline de migraciones (A1).
-2. Registro de errores, auditoría y protección del último SuperAdmin.
-3. Primer arranque dentro de la app e instalador.
-4. Pruebas sobre la lógica de pesaje.
-5. Cifrado de la base (A2) y licencias (A3), en ese orden: la clave de cifrado puede depender del HWID.
-6. Inyección de dependencias gradual (A4/A6).
+1. Migración a PostgreSQL y migración inicial limpia (A1).
+2. Multi-puesto: fotos con ruta relativa y carpeta compartida, configuración por puesto, numeración y concurrencia.
+3. Registro de errores, auditoría (con el puesto de origen) y protección del último SuperAdmin.
+4. Primer arranque dentro de la app e instalador con los dos modos (servidor + puesto, solo puesto).
+5. Pruebas sobre la lógica de pesaje (con PostgreSQL de prueba o contenedor, no SQLite en memoria).
+6. Seguridad de la base (A2) y licencias (A3).
+7. Inyección de dependencias gradual (A4/A6).
