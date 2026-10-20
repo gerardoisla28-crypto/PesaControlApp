@@ -197,7 +197,7 @@ public class DatabaseService
 
     private async Task SeedAsync(AppDbContext context)
     {
-        if (await context.Users.AnyAsync())
+        if (await context.Users.AnyAsync() || await context.SystemConfigs.AnyAsync())
         {
             await SeedMissingAsync(context);
             return;

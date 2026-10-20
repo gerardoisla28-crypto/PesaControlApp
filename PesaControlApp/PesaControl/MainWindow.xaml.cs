@@ -16,7 +16,7 @@ public partial class MainWindow : Window
         _dbService = new DatabaseService();
         _authService = new AuthService(_dbService);
         LoginButton.IsEnabled = false;
-        _ = InitializeDatabaseAsync();
+        Loaded += async (_, _) => await InitializeDatabaseAsync();
     }
 
     private async Task InitializeDatabaseAsync()
