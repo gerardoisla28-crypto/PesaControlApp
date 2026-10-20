@@ -190,12 +190,12 @@ public partial class RegistrosViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowDetail(WeighingRecord? record)
+    private async Task ShowDetailAsync(WeighingRecord? record)
     {
         if (record == null) return;
 
-        var ctx = _dbService.CreateContext();
-        var fullRecord = new WeighingRepository(ctx).GetByIdAsync(record.Id).GetAwaiter().GetResult();
+        using var ctx = _dbService.CreateContext();
+        var fullRecord = await new WeighingRepository(ctx).GetByIdAsync(record.Id);
         if (fullRecord == null) return;
 
         var dialog = new RegistroDetailPopup(fullRecord);
