@@ -6,121 +6,28 @@ namespace PesaControl.Data.Data;
 
 public class DatabaseService
 {
-    private readonly string _dbPath;
+    private readonly string _connectionString;
     private readonly IPasswordHasher _passwordHasher = new Argon2idPasswordHasher();
 
-    public DatabaseService()
+    public DatabaseService() : this(DatabaseSettings.GetConnectionString())
     {
-        _dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pesacontrol.db");
     }
 
-    public DatabaseService(string dbPath)
+    public DatabaseService(string connectionString)
     {
-        _dbPath = dbPath;
+        _connectionString = connectionString;
     }
 
     public async Task InitializeAsync()
     {
         using var context = CreateContext();
-        await context.Database.EnsureCreatedAsync();
-
-        await MigrateUserPasswordsAsync(context);
-
-        await EnsureLegacyRawSqlAsync(context);
-
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS DvrConfigs (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                Manufacturer TEXT NOT NULL DEFAULT 'Dahua',
-                Model TEXT NOT NULL DEFAULT 'DH-XVR1B04-I',
-                IpAddress TEXT NOT NULL,
-                HttpPort INTEGER NOT NULL DEFAULT 80,
-                RtspPort INTEGER NOT NULL DEFAULT 554,
-                Username TEXT NOT NULL,
-                Password TEXT,
-                MaxChannels INTEGER NOT NULL DEFAULT 4,
-                IsActive INTEGER NOT NULL DEFAULT 1
-            )");
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE CameraConfigs ADD COLUMN DvrConfigId INTEGER NULL REFERENCES DvrConfigs(Id)");
-        }
-        catch { }
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE CameraConfigs ADD COLUMN ChannelNumber INTEGER NULL");
-        }
-        catch { }
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE CameraConfigs ADD COLUMN Subtype INTEGER NOT NULL DEFAULT 0");
-        }
-        catch { }
+        await context.Database.MigrateAsync();
 
         await MigrateLegacyScaleConfigAsync(context);
         await SeedAsync(context);
     }
 
-    private async Task EnsureLegacyRawSqlAsync(AppDbContext context)
-    {
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS Drivers (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                FullName TEXT NOT NULL,
-                Phone TEXT,
-                CompanyId INTEGER NOT NULL,
-                IsActive INTEGER NOT NULL DEFAULT 1,
-                FOREIGN KEY (CompanyId) REFERENCES Companies(Id) ON DELETE CASCADE
-            )");
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE WeighingRecords ADD COLUMN PhotoPathExit TEXT NULL");
-        }
-        catch { }
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE WeighingRecords ADD COLUMN EntryScaleName TEXT NULL");
-        }
-        catch { }
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE WeighingRecords ADD COLUMN ExitScaleName TEXT NULL");
-        }
-        catch { }
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE WeighingRecords ADD COLUMN IsExitWeightManual INTEGER NOT NULL DEFAULT 0");
-        }
-        catch { }
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS ScaleConfigs (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                IsActive INTEGER NOT NULL DEFAULT 1,
-                SortOrder INTEGER NOT NULL DEFAULT 0,
-                ProtocolType TEXT NOT NULL DEFAULT 'Serial',
-                PortName TEXT,
-                BaudRate INTEGER NOT NULL DEFAULT 9600,
-                Parity INTEGER NOT NULL DEFAULT 0,
-                DataBits INTEGER NOT NULL DEFAULT 8,
-                StopBits INTEGER NOT NULL DEFAULT 1,
-                IpAddress TEXT,
-                TcpPort INTEGER NOT NULL DEFAULT 502,
-                SlaveId INTEGER NOT NULL DEFAULT 1,
-                RegisterAddress INTEGER NOT NULL DEFAULT 0,
-                ReadIntervalMs INTEGER NOT NULL DEFAULT 200
-            )");
-    }
-
-    public AppDbContext CreateContext() => new(_dbPath);
+    public AppDbContext CreateContext() => new(_connectionString);
 
     public async Task<bool> HasAdminAsync()
     {
@@ -154,39 +61,6 @@ public class DatabaseService
         context.Users.Add(new User { Username = username, FullName = fullName, Role = UserRoles.SuperAdmin,
             PasswordHash = _passwordHasher.Hash(password), IsActive = true, CreatedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
-    }
-
-    private async Task MigrateUserPasswordsAsync(AppDbContext context)
-    {
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN PasswordHash TEXT NULL"); }
-        catch { /* New databases already have the column. */ }
-
-        var legacyUsers = new List<(int Id, string Password)>();
-        await using var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
-        await using (var command = connection.CreateCommand())
-        {
-            command.CommandText = "SELECT Id, Password FROM Users WHERE (PasswordHash IS NULL OR PasswordHash = '') AND Password <> ''";
-            try
-            {
-                await using var reader = await command.ExecuteReaderAsync();
-                while (await reader.ReadAsync()) legacyUsers.Add((reader.GetInt32(0), reader.GetString(1)));
-            }
-            catch { return; } // No legacy Password column in a newly-created database.
-        }
-
-        if (legacyUsers.Count == 0) return;
-        await using var transaction = await connection.BeginTransactionAsync();
-        foreach (var (id, password) in legacyUsers)
-        {
-            await using var update = connection.CreateCommand();
-            update.Transaction = transaction;
-            update.CommandText = "UPDATE Users SET PasswordHash = $hash, Password = '' WHERE Id = $id";
-            var hash = update.CreateParameter(); hash.ParameterName = "$hash"; hash.Value = _passwordHasher.Hash(password); update.Parameters.Add(hash);
-            var key = update.CreateParameter(); key.ParameterName = "$id"; key.Value = id; update.Parameters.Add(key);
-            await update.ExecuteNonQueryAsync();
-        }
-        await transaction.CommitAsync();
     }
 
     private static void ValidateCredentials(string username, string password)

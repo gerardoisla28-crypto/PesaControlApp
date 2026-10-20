@@ -129,21 +129,14 @@ public class ExportImportService
 
             progress?.Report(10);
 
-            var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pesacontrol.db");
-            if (File.Exists(dbPath))
-            {
-                File.Copy(dbPath, dbPath + ".bak", overwrite: true);
-            }
-
-            if (File.Exists(dbPath))
-            {
-                File.Delete(dbPath);
-            }
-
             progress?.Report(20);
 
             using var context = _db.CreateContext();
-            await context.Database.EnsureCreatedAsync();
+            await context.Database.MigrateAsync();
+
+            // La restauración reemplaza todos los datos; si algo falla, la transacción deja la base como estaba.
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            await TruncateAllTablesAsync(context);
 
             foreach (var entity in context.ChangeTracker.Entries().ToList())
             {
@@ -277,6 +270,9 @@ public class ExportImportService
                 await context.SaveChangesAsync();
             }
 
+            await ResetIdentitySequencesAsync(context);
+            await transaction.CommitAsync();
+
             result.Success = true;
             result.Message = $"Importación completada. {result.WeighingRecordsImported} registros de pesaje, " +
                              $"{result.CompaniesImported} empresas, {result.ProductsImported} productos, " +
@@ -292,6 +288,29 @@ public class ExportImportService
         }
 
         return result;
+    }
+
+    private static IEnumerable<string> GetTableNames(AppDbContext context)
+        => context.Model.GetEntityTypes().Select(t => t.GetTableName()).OfType<string>().Distinct();
+
+    private static async Task TruncateAllTablesAsync(AppDbContext context)
+    {
+        var tables = string.Join(", ", GetTableNames(context).Select(t => $"\"{t}\""));
+#pragma warning disable EF1002 // los nombres salen del modelo de EF, no de entrada del usuario
+        await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE");
+#pragma warning restore EF1002
+    }
+
+    // Los registros importados traen su Id; hay que alinear las secuencias para que los nuevos no colisionen.
+    private static async Task ResetIdentitySequencesAsync(AppDbContext context)
+    {
+        foreach (var table in GetTableNames(context))
+        {
+#pragma warning disable EF1002
+            await context.Database.ExecuteSqlRawAsync(
+                $"SELECT setval(pg_get_serial_sequence('\"{table}\"', 'Id'), COALESCE(MAX(\"Id\"), 1), MAX(\"Id\") IS NOT NULL) FROM \"{table}\"");
+#pragma warning restore EF1002
+        }
     }
 
     private async Task<ExportPackage> GatherDataAsync(IProgress<int>? progress = null)
