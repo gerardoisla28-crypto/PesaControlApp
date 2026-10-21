@@ -43,7 +43,7 @@ Todo lo hecho está en la rama `feature/postgresql` (aún sin fusionar a `dev`).
 - **Fechas en hora local sin zona horaria**: todos los puestos de una instalación comparten zona horaria.
 - **Usuario sensible a mayúsculas y minúsculas** en el login, a propósito.
 - **Contraseñas**: se prioriza el largo sobre la complejidad; el mínimo es menor para Operator y Viewer, que las escriben con frecuencia en el puesto.
-- **Cada puesto debe poder pesar con y sin conexión** (diseño local-first, ver la sección "Operación con y sin conexión").
+- **Cada puesto debe poder pesar con y sin conexión** (diseño local-first, ver la sección "Operación con y sin conexión"). Almacén local: **SQLite embebido**; servidor central: **PostgreSQL**.
 - **Numeración de tickets por serie de puesto** (`A-2026-10-0001`, `B-2026-10-0001`): sin huecos dentro de cada puesto y sin depender de la red.
 - **Camión que entra por un puesto y sale por otro sin conexión: se permite el registro manual** de la salida, con los datos del ticket impreso.
 - **Sin límite de tiempo sin conexión**: un puesto puede trabajar indefinidamente sin servidor (incluso un cliente con un solo puesto sin red). Los registros se pueden **exportar a un archivo, llevarlos en un pendrive y cargarlos en otro equipo**.
@@ -56,11 +56,12 @@ Todo lo hecho está en la rama `feature/postgresql` (aún sin fusionar a `dev`).
 
 Cada puesto guarda y numera en un **almacén local** y sincroniza con el servidor cuando hay conexión. Sin servidor, el puesto sigue funcionando de forma autónoma y los datos viajan en archivos.
 
-### Decisión pendiente (afecta al trabajo ya hecho)
-- **¿Qué es el almacén local de cada puesto?**
-  - **Recomendado: SQLite embebido** en cada puesto (sin instalación ni administración) y PostgreSQL solo como **servidor central** opcional. Implica mantener dos proveedores de EF Core (SQLite local y Npgsql central) y dos juegos de migraciones.
-  - Alternativa: PostgreSQL local en cada puesto. Un solo proveedor y un solo juego de migraciones, pero hay que instalar y mantener un servicio de base de datos en cada báscula, lo que pesa para clientes con un solo puesto.
-  - La migración a PostgreSQL ya hecha sigue siendo válida como lado servidor y como esquema; lo que se rehace es qué base usa directamente cada puesto.
+### Decisión tomada: almacén local SQLite y servidor central PostgreSQL (2026-10-21)
+- Cada puesto usa **SQLite embebido** como almacén local (sin instalación ni administración) y funciona solo, sin servidor.
+- **PostgreSQL es el servidor central**, usado cuando hay conexión para consolidar y compartir datos entre puestos.
+- Implica mantener **dos proveedores de EF Core** (SQLite local y Npgsql central) y dos juegos de migraciones (`Migrations/Sqlite` y `Migrations/Postgres`), con las entidades compartidas.
+- La migración a PostgreSQL ya hecha sigue siendo válida como lado servidor y como esquema. Lo que se rehace es qué base usa directamente cada puesto (hoy habla con PostgreSQL).
+- Configuración y datos del puesto (código de puesto, báscula, cámaras, impresora, contador de tickets) viven **solo en el almacén local**, no en la base compartida.
 
 ### Diseño
 - **Numeración:** cada puesto tiene un **código** (en su configuración) y una serie propia. El contador vive en el almacén local y se incrementa **en la misma transacción** que guarda el pesaje, por lo que no deja huecos. Anular un ticket (`Cancelled`) conserva su número; los pesajes nunca se borran.
