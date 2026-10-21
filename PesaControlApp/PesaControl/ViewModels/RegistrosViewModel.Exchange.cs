@@ -36,11 +36,9 @@ public partial class RegistrosViewModel
     public string SelectionText
         => $"{(SelectedInFilterCount == 1 ? "1 seleccionado" : $"{SelectedInFilterCount} seleccionados")} de {TotalRecords}";
 
-    public string ExportPendingText => $"Exportar pendientes ({PendingCount})";
 
     partial void OnSelectedInFilterCountChanged(int value) => OnPropertyChanged(nameof(SelectionText));
     partial void OnTotalRecordsChanged(int value) => OnPropertyChanged(nameof(SelectionText));
-    partial void OnPendingCountChanged(int value) => OnPropertyChanged(nameof(ExportPendingText));
 
     private void InitializeExchange(DatabaseService db, string role)
     {
@@ -136,20 +134,6 @@ public partial class RegistrosViewModel
         if (path is not null) await ExportSelectedToAsync(path);
     }
 
-    [RelayCommand]
-    private async Task ExportPendingAsync()
-    {
-        await RefreshPendingCountAsync();
-        if (PendingCount == 0)
-        {
-            StatusMessage = "No hay pesajes pendientes de exportar.";
-            return;
-        }
-
-        var path = await AskSavePathAsync("Exportar pesajes pendientes");
-        if (path is not null) await ExportPendingToAsync(path);
-    }
-
     private async Task<string?> AskSavePathAsync(string title)
     {
         var stationCode = await _db.GetStationCodeAsync();
@@ -182,16 +166,6 @@ public partial class RegistrosViewModel
         {
             var result = await Task.Run(() => _exchange.ExportSelectedAsync(path, ids, progress));
             foreach (var id in ids) _selectedIds.Remove(id);
-            await SearchAsync();
-            StatusMessage = ExportedMessage(result);
-        });
-    }
-
-    public async Task ExportPendingToAsync(string path)
-    {
-        await RunExchangeAsync("Exportando pesajes...", async progress =>
-        {
-            var result = await Task.Run(() => _exchange.ExportAsync(path, onlyPending: true, progress));
             await SearchAsync();
             StatusMessage = ExportedMessage(result);
         });

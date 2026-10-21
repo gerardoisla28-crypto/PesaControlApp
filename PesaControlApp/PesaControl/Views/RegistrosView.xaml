@@ -114,9 +114,6 @@
                         <Button Content="Exportar seleccionados" Command="{Binding ExportSelectedCommand}"
                                 ToolTip="Crea un archivo con los pesajes marcados para llevarlo a otro equipo"
                                 Style="{StaticResource SuccessButton}" Margin="0,0,4,0" />
-                        <Button Content="{Binding ExportPendingText}" Command="{Binding ExportPendingCommand}"
-                                ToolTip="Todos los pesajes nuevos o modificados desde la última exportación"
-                                Style="{StaticResource SuccessButton}" Margin="0,0,4,0" />
                         <Button Content="Importar archivo" Command="{Binding ImportFileCommand}"
                                 ToolTip="Une los pesajes de un archivo de otro puesto con los de este equipo"
                                 Style="{StaticResource PrimaryButton}" />
