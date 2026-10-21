@@ -74,7 +74,8 @@ Cada puesto guarda y numera en un **almacén local** y sincroniza con el servido
 
 ### Tareas
 - [ ] Definir el código de puesto en la configuración por puesto.
-- [ ] Almacén local en cada puesto y reemplazo del contador central por el contador local por serie.
+- [x] (parte 1) Almacén local SQLite en cada puesto, con `LocalDbContext` y `CentralDbContext` sobre un modelo compartido y migraciones por proveedor. *Hecho en la rama `feature/local-store`.*
+- [ ] Reemplazo del contador central interino por el contador local por serie de puesto.
 - [ ] Agregar a los pesajes: código de puesto, versión o fecha de modificación y estado de sincronización.
 - [ ] Servicio de sincronización en segundo plano (subir pendientes, bajar catálogos y tickets abiertos), con reintentos.
 - [ ] **Exportación incremental a archivo** (pesajes pendientes desde la última exportación, con sus fotos) e **importación que fusiona sin borrar** (no reutilizar tal cual la restauración actual, que vacía las tablas).
