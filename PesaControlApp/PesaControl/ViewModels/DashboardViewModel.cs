@@ -33,24 +33,19 @@ public partial class DashboardViewModel : ObservableObject
         CurrentUser = currentUser;
     }
 
-    // Si la pantalla actual tiene cambios sin guardar, pregunta antes de salir de ella.
-    private async Task<bool> CanLeaveCurrentAsync()
+    public bool HasPendingChanges => CurrentViewModel is IUnsavedChanges { HasUnsavedChanges: true };
+
+    // Si la pantalla actual tiene cambios sin guardar, pregunta antes de salir de ella o de la app.
+    public async Task<bool> CanLeaveCurrentAsync()
     {
         if (CurrentViewModel is not IUnsavedChanges { HasUnsavedChanges: true } pending)
             return true;
 
-        var answer = System.Windows.MessageBox.Show(
-            $"Hay cambios sin guardar en: {pending.UnsavedChangesDescription}.\n\n" +
-            "Sí: guardar y continuar\nNo: salir sin guardar\nCancelar: seguir editando",
-            "Cambios sin guardar",
-            System.Windows.MessageBoxButton.YesNoCancel,
-            System.Windows.MessageBoxImage.Warning);
-
-        switch (answer)
+        switch (UnsavedChangesDialog.Ask(pending.UnsavedChangesDescription))
         {
-            case System.Windows.MessageBoxResult.Yes:
+            case UnsavedChangesChoice.Save:
                 return await pending.SaveChangesAsync();
-            case System.Windows.MessageBoxResult.No:
+            case UnsavedChangesChoice.Discard:
                 pending.DiscardChanges();
                 return true;
             default:

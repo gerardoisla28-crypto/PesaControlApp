@@ -76,9 +76,26 @@ public partial class DashboardWindow : Window
         };
 
         DataContext = _dashboardVm;
+        Closing += OnWindowClosing;
 
         _ = InitializeCameraAsync(dbService, weighingVm, controlsVm, anprService, dvrService);
         _ = _dashboardVm.LoadModuleConfigAsync(dbService);
+    }
+
+    private bool _closeConfirmed;
+
+    // Al cerrar la ventana con cambios sin guardar se pregunta primero; el cierre se cancela y se
+    // repite si el usuario confirma.
+    private async void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_closeConfirmed || !_dashboardVm.HasPendingChanges) return;
+
+        e.Cancel = true;
+        if (await _dashboardVm.CanLeaveCurrentAsync())
+        {
+            _closeConfirmed = true;
+            Close();
+        }
     }
 
     private static async Task<List<ScaleConfig>> LoadScaleConfigsAsync(DatabaseService dbService)
