@@ -293,11 +293,6 @@
             <TabItem Header="Respaldo">
                 <views:BackupControl DataContext="{Binding BackupVM}" />
             </TabItem>
-
-            <!-- TAB: Intercambio entre puestos -->
-            <TabItem Header="Intercambio">
-                <views:ExchangeControl DataContext="{Binding ExchangeVM}" />
-            </TabItem>
         </TabControl>
 
     </Grid>

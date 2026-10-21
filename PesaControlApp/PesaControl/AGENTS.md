@@ -29,7 +29,7 @@ El archivo de solución es `.slnx` (formato XML de VS2022+, no el `.sln` clásic
 
 ## Módulos principales
 
-- **Intercambio entre puestos**: `WeighingExchangeService` exporta los pesajes pendientes (`ExportPending`) a un zip con `exchange.json`, `manifest.json` (suma de verificación) y fotos, e importa fusionando sin borrar (empareja empresas por RUT y luego por nombre; ante datos distintos conserva el local e informa el conflicto). Pantalla: Configuración › Intercambio.
+- **Intercambio entre puestos**: `WeighingExchangeService` exporta los pesajes pendientes (`ExportPending`) a un zip con `exchange.json`, `manifest.json` (suma de verificación) y fotos, e importa fusionando sin borrar (empareja empresas por RUT y luego por nombre; ante datos distintos conserva el local e informa el conflicto). Pantalla: Registros (casillas, filtro Exportación, exportar seleccionados o pendientes e importar; solo SuperAdmin, Admin y Operator).
 - **Tickets numerados por puesto**: `LocalWeighingDataService.CreateAsync` asigna `CÓDIGO-AAAA-MM-NNNN` en la misma transacción que guarda el pesaje; el código de puesto (`station_code`, 1 a 4 caracteres) se pide al primer arranque y no viaja en los respaldos.
 - **Pesaje**: `ScaleManager`, `WeighingService` y protocolos `IWeighingProtocol` (Sensocar A12, Sensoc, Modbus RTU/TCP, serial, autodetección).
 - **Acceso**: `IBarrierService` / `ITrafficLightService` con implementaciones Modbus y Arduino (`ArduinoAccessService` en UI).
