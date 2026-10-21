@@ -91,3 +91,26 @@ public static class ExchangeKeys
     public static string NormalizeName(string? name)
         => string.Join(' ', (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
 }
+
+public class ExchangeConflict
+{
+    public string TicketNumber { get; set; } = "";
+    public string Field { get; set; } = "";
+    public string LocalValue { get; set; } = "";
+    public string IncomingValue { get; set; } = "";
+}
+
+public class ExchangeImportResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = "";
+    public string SourceStationCode { get; set; } = "";
+    public DateTime ExportedAt { get; set; }
+    public int Inserted { get; set; }
+    public int Updated { get; set; }
+    public int Unchanged { get; set; }
+    public int CompaniesCreated { get; set; }
+    public int ProductsCreated { get; set; }
+    public int PhotosCopied { get; set; }
+    public List<ExchangeConflict> Conflicts { get; set; } = [];
+}

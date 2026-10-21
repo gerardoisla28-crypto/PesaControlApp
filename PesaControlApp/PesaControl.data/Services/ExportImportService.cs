@@ -412,10 +412,5 @@ public class ExportImportService
         return Convert.ToHexStringLower(hash);
     }
 
-    private static string GetPhotosDirectory()
-    {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PesaControl", "Photos");
-    }
+    private static string GetPhotosDirectory() => DatabaseSettings.GetPhotosDirectory();
 }

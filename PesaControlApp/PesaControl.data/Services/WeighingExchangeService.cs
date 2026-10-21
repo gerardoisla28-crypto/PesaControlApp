@@ -9,7 +9,7 @@ namespace PesaControl.Data.Services;
 
 // Intercambio de pesajes entre puestos mediante un archivo (por ejemplo en un pendrive), para los puestos
 // que trabajan sin conexión al servidor.
-public class WeighingExchangeService
+public partial class WeighingExchangeService
 {
     public const string ExchangeEntry = "exchange.json";
     public const string ManifestEntry = "manifest.json";
