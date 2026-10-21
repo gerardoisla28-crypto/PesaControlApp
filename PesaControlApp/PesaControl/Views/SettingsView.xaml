@@ -15,7 +15,8 @@
 
         <TextBlock Grid.Row="0" Text="Configuración del Sistema" Style="{StaticResource SectionTitle}" FontSize="20" Margin="0,0,0,8" />
 
-        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+        <TabControl x:Name="SettingsTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}"
+                    SelectionChanged="SettingsTabs_SelectionChanged">
             <!-- TAB: Básculas -->
             <TabItem Header="Básculas">
                 <Grid>

@@ -58,7 +58,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         if (!StationCodePolicy.IsValid(code))
         {
             StationCodeError = StationCodePolicy.Describe();
-            SelectedTabIndex = StationTabIndex;
+            ShowTab(StationTabIndex);
             return false;
         }
 
@@ -73,7 +73,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         catch (Exception ex)
         {
             StationCodeError = $"No se pudo guardar: {ex.Message}";
-            SelectedTabIndex = StationTabIndex;
+            ShowTab(StationTabIndex);
             return false;
         }
     }
@@ -95,44 +95,107 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     private bool NetworkDirty => SelectedModeName != _savedModeName || ServerPort != _savedServerPort || ServerUrl != _savedServerUrl;
     private bool ScaleDirty => IsScaleEditorOpen && SnapshotScale() != _scaleSnapshot;
 
-    public bool HasUnsavedChanges => StationCodeDirty || NetworkDirty || ScaleDirty;
+    private const int ScalesTabIndex = 0;
+    private const int NetworkTabIndex = 2;
+
+    private bool IsTabDirty(int tab) => tab switch
+    {
+        ScalesTabIndex => ScaleDirty,
+        StationTabIndex => StationCodeDirty,
+        NetworkTabIndex => NetworkDirty,
+        _ => false
+    };
+
+    private static string TabName(int tab) => tab switch
+    {
+        ScalesTabIndex => "Básculas",
+        StationTabIndex => "Puesto",
+        NetworkTabIndex => "Red",
+        _ => ""
+    };
+
+    public bool HasUnsavedChanges => IsTabDirty(ScalesTabIndex) || IsTabDirty(StationTabIndex) || IsTabDirty(NetworkTabIndex);
 
     public string UnsavedChangesDescription
+        => string.Join(", ", new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex }.Where(IsTabDirty).Select(TabName));
+
+    // Al guardar desde el aviso se valida primero; si falla, se queda en la pestaña con el error.
+    private async Task<bool> SaveTabAsync(int tab)
     {
-        get
+        switch (tab)
         {
-            var parts = new List<string>();
-            if (ScaleDirty) parts.Add("Básculas");
-            if (StationCodeDirty) parts.Add("Puesto");
-            if (NetworkDirty) parts.Add("Red");
-            return string.Join(", ", parts);
+            case StationTabIndex:
+                return await TrySaveStationCodeAsync();
+            case NetworkTabIndex:
+                await SaveConfigAsync();
+                return !NetworkDirty;
+            case ScalesTabIndex:
+                await SaveScaleAsync();
+                return !IsScaleEditorOpen;
+            default:
+                return true;
+        }
+    }
+
+    private void DiscardTab(int tab)
+    {
+        switch (tab)
+        {
+            case StationTabIndex:
+                StationCode = _savedStationCode;
+                StationCodeError = "";
+                break;
+            case NetworkTabIndex:
+                SelectedModeName = _savedModeName;
+                ServerPort = _savedServerPort;
+                ServerUrl = _savedServerUrl;
+                break;
+            case ScalesTabIndex:
+                if (IsScaleEditorOpen) CancelScaleEditor();
+                break;
         }
     }
 
     public async Task<bool> SaveChangesAsync()
     {
-        if (StationCodeDirty && !await TrySaveStationCodeAsync()) return false;
-        if (NetworkDirty)
-        {
-            await SaveConfigAsync();
-            if (NetworkDirty) return false;
-        }
-        if (ScaleDirty)
-        {
-            await SaveScaleAsync();
-            if (IsScaleEditorOpen) return false;
-        }
+        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex }.Where(IsTabDirty))
+            if (!await SaveTabAsync(tab)) return false;
         return true;
     }
 
     public void DiscardChanges()
     {
-        StationCode = _savedStationCode;
-        StationCodeError = "";
-        SelectedModeName = _savedModeName;
-        ServerPort = _savedServerPort;
-        ServerUrl = _savedServerUrl;
-        if (IsScaleEditorOpen) CancelScaleEditor();
+        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex })
+            DiscardTab(tab);
+    }
+
+    // Cambiar de pestaña dentro de Configuración también pregunta si la pestaña que se deja tiene cambios.
+    public bool IsTabWithUnsavedChanges(int tab) => IsTabDirty(tab);
+
+    public async Task<bool> CanLeaveTabAsync(int tab)
+    {
+        if (!IsTabDirty(tab)) return true;
+
+        switch (UnsavedChangesDialog.Ask(TabName(tab)))
+        {
+            case UnsavedChangesChoice.Save:
+                return await SaveTabAsync(tab);
+            case UnsavedChangesChoice.Discard:
+                DiscardTab(tab);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // Evita que un cambio de pestaña hecho por el propio código (por ejemplo, para mostrar un error) vuelva a preguntar.
+    public bool SuppressTabGuard { get; private set; }
+
+    private void ShowTab(int tab)
+    {
+        SuppressTabGuard = true;
+        SelectedTabIndex = tab;
+        SuppressTabGuard = false;
     }
 
     // ── Básculas ──────────────────────────────────────────
