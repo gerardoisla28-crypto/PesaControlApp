@@ -80,6 +80,14 @@
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                     </StackPanel>
 
+                    <StackPanel Margin="0,0,6,0" Visibility="{Binding CanExchange, Converter={StaticResource BoolToVis}}">
+                        <ComboBox ItemsSource="{Binding ExportOptions}"
+                                  SelectedItem="{Binding FilterExport}"
+                                  Width="130" ToolTip="Filtrar por estado de exportación" />
+                        <TextBlock Text="Exportación" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+
                 </WrapPanel>
 
                 <WrapPanel>
@@ -92,6 +100,31 @@
                     <TextBlock Text="{Binding StatusMessage}"
                                Style="{StaticResource StatusMessage}" VerticalAlignment="Center" />
                 </WrapPanel>
+
+                <!-- Intercambio entre puestos (pendrive): solo para quien puede exportar e importar -->
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding CanExchange, Converter={StaticResource BoolToVis}}">
+                    <Separator Background="{StaticResource SurfaceLightBrush}" Margin="0,0,0,10" />
+                    <WrapPanel>
+                        <Button Content="Seleccionar todos" Command="{Binding SelectAllFilteredCommand}"
+                                ToolTip="Marca todos los pesajes del filtro actual, en todas las páginas"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,4,0" />
+                        <Button Content="Quitar selección" Command="{Binding ClearSelectionCommand}"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" />
+                        <TextBlock Text="{Binding SelectionText}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <Button Content="Exportar seleccionados" Command="{Binding ExportSelectedCommand}"
+                                ToolTip="Crea un archivo con los pesajes marcados para llevarlo a otro equipo"
+                                Style="{StaticResource SuccessButton}" Margin="0,0,4,0" />
+                        <Button Content="{Binding ExportPendingText}" Command="{Binding ExportPendingCommand}"
+                                ToolTip="Todos los pesajes nuevos o modificados desde la última exportación"
+                                Style="{StaticResource SuccessButton}" Margin="0,0,4,0" />
+                        <Button Content="Importar archivo" Command="{Binding ImportFileCommand}"
+                                ToolTip="Une los pesajes de un archivo de otro puesto con los de este equipo"
+                                Style="{StaticResource PrimaryButton}" />
+                    </WrapPanel>
+                    <ProgressBar Value="{Binding ProgressValue}" Height="8" BorderThickness="0" Margin="0,8,0,0"
+                                 Foreground="{StaticResource AccentGreenBrush}" Background="{StaticResource SurfaceLightBrush}"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
             </StackPanel>
         </Border>
 
@@ -140,13 +173,42 @@
                     </ListView.Resources>
                     <ListView.View>
                         <GridView AllowsColumnReorder="False">
-                            <GridViewColumn Header="Ticket" Width="110">
+                            <GridViewColumn x:Name="CheckColumn" Width="40">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelectedForExport, Mode=TwoWay}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  ToolTip="Marcar para exportar" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Ticket" Width="150">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding TicketNumber}"
                                                    HorizontalAlignment="Stretch"
                                                    TextAlignment="Center"
                                                    VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn x:Name="ExportColumn" Header="Exportación" Width="100">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock HorizontalAlignment="Stretch" TextAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="Exportado" />
+                                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ExportPending}" Value="True">
+                                                            <Setter Property="Text" Value="Pendiente" />
+                                                            <Setter Property="Foreground" Value="{StaticResource AccentOrangeBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>

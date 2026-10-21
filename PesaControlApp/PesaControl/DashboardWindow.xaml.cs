@@ -49,7 +49,7 @@ public partial class DashboardWindow : Window
         // Detect if barrier and traffic light share the same serial port (single Arduino)
         TryWireSharedArduinoService(dbService, barrierVm, trafficLightVm);
 
-        var registrosVm = new RegistrosViewModel(dbService);
+        var registrosVm = new RegistrosViewModel(dbService, currentUser.Role);
         var usersVm = new UsersViewModel(dbService, currentUser);
         var controlsVm = new ControlsViewModel(dbService, barrierVm, trafficLightVm);
         var settingsVm = new SettingsViewModel(dbService, _scaleManager, weighingVm, exportImport);

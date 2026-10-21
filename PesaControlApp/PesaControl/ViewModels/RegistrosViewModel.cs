@@ -41,11 +41,12 @@ public partial class RegistrosViewModel : ObservableObject
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<Company> Companies { get; } = new();
 
-    public RegistrosViewModel(DatabaseService dbService)
+    public RegistrosViewModel(DatabaseService dbService, string role = UserRoles.Viewer)
     {
         _dbService = dbService;
         var ctx = dbService.CreateContext();
         _weighingRepo = new WeighingRepository(ctx);
+        InitializeExchange(dbService, role);
 
         _ = LoadInitialAsync();
 
@@ -63,6 +64,7 @@ public partial class RegistrosViewModel : ObservableObject
             StatusMessage = "Buscando...";
             CurrentPage = 1;
             await FetchPageAsync();
+            await RefreshFilterIdsAsync();
         }
         catch (Exception ex)
         {
@@ -107,12 +109,14 @@ public partial class RegistrosViewModel : ObservableObject
             string.IsNullOrWhiteSpace(SearchPlate) ? null : SearchPlate,
             string.IsNullOrWhiteSpace(SearchTicket) ? null : SearchTicket,
             FilterFrom, FilterTo, FilterStatus,
-            FilterProduct?.Id, FilterCompany?.Id);
+            FilterProduct?.Id, FilterCompany?.Id, CurrentExportFilter());
 
         App.Current.Dispatcher.Invoke(() =>
         {
+            DetachSelection();
             Records.Clear();
             foreach (var r in result.Items) Records.Add(r);
+            AttachSelection(result.Items);
 
             TotalRecords = result.TotalCount;
             TotalPages = result.TotalPages;
@@ -133,6 +137,7 @@ public partial class RegistrosViewModel : ObservableObject
         FilterStatus = null;
         FilterProduct = null;
         FilterCompany = null;
+        FilterExport = AllExports;
         await SearchAsync();
     }
 
