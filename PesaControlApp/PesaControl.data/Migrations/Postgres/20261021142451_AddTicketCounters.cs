@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace PesaControl.Data.Migrations
+namespace PesaControl.Data.Migrations.Postgres
 {
     /// <inheritdoc />
     public partial class AddTicketCounters : Migration

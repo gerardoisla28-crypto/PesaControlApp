@@ -136,7 +136,7 @@ public class ExportImportService
 
             // La restauración reemplaza todos los datos; si algo falla, la transacción deja la base como estaba.
             await using var transaction = await context.Database.BeginTransactionAsync();
-            await TruncateAllTablesAsync(context);
+            await ClearAllTablesAsync(context);
 
             foreach (var entity in context.ChangeTracker.Entries().ToList())
             {
@@ -270,7 +270,6 @@ public class ExportImportService
                 await context.SaveChangesAsync();
             }
 
-            await ResetIdentitySequencesAsync(context);
             await transaction.CommitAsync();
 
             result.Success = true;
@@ -293,24 +292,18 @@ public class ExportImportService
     private static IEnumerable<string> GetTableNames(AppDbContext context)
         => context.Model.GetEntityTypes().Select(t => t.GetTableName()).OfType<string>().Distinct();
 
-    private static async Task TruncateAllTablesAsync(AppDbContext context)
+    private static async Task ClearAllTablesAsync(AppDbContext context)
     {
-        var tables = string.Join(", ", GetTableNames(context).Select(t => $"\"{t}\""));
-#pragma warning disable EF1002 // los nombres salen del modelo de EF, no de entrada del usuario
-        await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE");
-#pragma warning restore EF1002
-    }
-
-    // Los registros importados traen su Id; hay que alinear las secuencias para que los nuevos no colisionen.
-    private static async Task ResetIdentitySequencesAsync(AppDbContext context)
-    {
+        // Con las claves foráneas diferidas hasta el commit, el orden de borrado no importa.
+        await context.Database.ExecuteSqlRawAsync("PRAGMA defer_foreign_keys = ON;");
         foreach (var table in GetTableNames(context))
         {
-#pragma warning disable EF1002
-            await context.Database.ExecuteSqlRawAsync(
-                $"SELECT setval(pg_get_serial_sequence('\"{table}\"', 'Id'), COALESCE(MAX(\"Id\"), 1), MAX(\"Id\") IS NOT NULL) FROM \"{table}\"");
+#pragma warning disable EF1002 // los nombres salen del modelo de EF, no de entrada del usuario
+            await context.Database.ExecuteSqlRawAsync($"DELETE FROM \"{table}\"");
 #pragma warning restore EF1002
         }
+        // Reinicia los contadores de autoincremento; los registros importados traen su propio Id.
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence");
     }
 
     private async Task<ExportPackage> GatherDataAsync(IProgress<int>? progress = null)

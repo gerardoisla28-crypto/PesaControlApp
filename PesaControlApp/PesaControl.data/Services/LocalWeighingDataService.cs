@@ -98,7 +98,7 @@ public class LocalWeighingDataService : IWeighingDataService
             VALUES (@prefix, COALESCE((
                 SELECT MAX(CAST(substr("TicketNumber", length(@prefix) + 1) AS integer))
                 FROM "WeighingRecords"
-                WHERE "TicketNumber" ~ ('^' || @prefix || '[0-9]+$')), 0) + 1)
+                WHERE "TicketNumber" GLOB (@prefix || '[0-9]*')), 0) + 1)
             ON CONFLICT ("Prefix") DO UPDATE SET "LastNumber" = "TicketCounters"."LastNumber" + 1
             RETURNING "LastNumber"
             """;
