@@ -37,6 +37,8 @@ public partial class RegistrosViewModel : ObservableObject
     [ObservableProperty] private string _pageInfo = "";
 
     public ObservableCollection<WeighingRecord> Records { get; } = new();
+    public ObservableCollection<PageItem> PageNumbers { get; } = new();
+    public int[] PageSizeOptions { get; } = [10, 20, 50, 100];
     public ObservableCollection<WeighingStatus> Statuses { get; } = new(Enum.GetValues<WeighingStatus>());
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<Company> Companies { get; } = new();
@@ -102,6 +104,41 @@ public partial class RegistrosViewModel : ObservableObject
         await FetchPageAsync();
     }
 
+    // Cambiar cuántos registros se muestran vuelve a la primera página.
+    partial void OnPageSizeChanged(int value) => _ = ChangePageSizeAsync();
+
+    private async Task ChangePageSizeAsync()
+    {
+        try
+        {
+            CurrentPage = 1;
+            await FetchPageAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    // Números de página: la primera, la última y las vecinas de la actual; los saltos largos se muestran con "…".
+    private void BuildPageNumbers()
+    {
+        PageNumbers.Clear();
+        var total = Math.Max(TotalPages, 1);
+        var pages = new SortedSet<int> { 1, total };
+        for (var p = CurrentPage - 2; p <= CurrentPage + 2; p++)
+            if (p >= 1 && p <= total) pages.Add(p);
+
+        var last = 0;
+        foreach (var page in pages)
+        {
+            if (last != 0 && page - last == 2) PageNumbers.Add(new PageItem(last + 1, CurrentPage));
+            else if (last != 0 && page - last > 2) PageNumbers.Add(PageItem.Ellipsis);
+            PageNumbers.Add(new PageItem(page, CurrentPage));
+            last = page;
+        }
+    }
+
     private async Task FetchPageAsync()
     {
         var result = await _weighingRepo.GetPagedAsync(
@@ -122,7 +159,8 @@ public partial class RegistrosViewModel : ObservableObject
             TotalPages = result.TotalPages;
             HasPreviousPage = CurrentPage > 1;
             HasNextPage = CurrentPage < TotalPages;
-            PageInfo = $"Pág {CurrentPage} de {TotalPages} ({TotalRecords} registros)";
+            PageInfo = $"Pág {CurrentPage} de {Math.Max(TotalPages, 1)} ({TotalRecords} registros)";
+            BuildPageNumbers();
             StatusMessage = $"{TotalRecords} registro(s) encontrado(s)";
         });
     }
@@ -225,4 +263,21 @@ public partial class RegistrosViewModel : ObservableObject
             foreach (var c in companies.OrderBy(x => x.Name)) Companies.Add(c);
         });
     }
+}
+
+// Un botón de la barra de páginas: un número o los puntos suspensivos de un salto.
+public class PageItem
+{
+    public static PageItem Ellipsis => new(0, 0);
+
+    public PageItem(int number, int currentPage)
+    {
+        Number = number;
+        IsCurrent = number != 0 && number == currentPage;
+    }
+
+    public int Number { get; }
+    public bool IsCurrent { get; }
+    public bool IsEllipsis => Number == 0;
+    public string Text => IsEllipsis ? "…" : Number.ToString();
 }
