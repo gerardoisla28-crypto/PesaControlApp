@@ -20,20 +20,26 @@ public class AppDbContext : DbContext
     public DbSet<ScaleConfig> ScaleConfigs => Set<ScaleConfig>();
     public DbSet<DvrConfig> DvrConfigs => Set<DvrConfig>();
 
-    private readonly string _dbPath;
+    private readonly string _connectionString;
 
-    public AppDbContext()
+    public AppDbContext(string connectionString)
     {
-        _dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pesacontrol.db");
-    }
-
-    public AppDbContext(string dbPath)
-    {
-        _dbPath = dbPath;
+        _connectionString = connectionString;
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite($"Data Source={_dbPath}");
+        => options.UseNpgsql(_connectionString);
+
+    // Las fechas se guardan como hora local sin zona, igual que antes con SQLite.
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<LocalDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<LocalDateTimeConverter>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

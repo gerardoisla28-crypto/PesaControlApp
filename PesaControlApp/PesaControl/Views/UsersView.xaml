@@ -147,8 +147,14 @@
                           Margin="0,0,0,8" />
 
                 <Label Content="Contraseña" Style="{StaticResource FormLabel}" />
-                <PasswordBox Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
-                             ToolTip="Entre 14 y 128 caracteres. Dejar vacío para mantener la actual al editar." />
+                <PasswordBox x:Name="PasswordInput" Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
+                             Style="{StaticResource MaterialDesignRevealPasswordBox}"
+                             ToolTip="Entre 14 y 128 caracteres para SuperAdmin y Admin; entre 8 y 128 para Operator y Viewer. Dejar vacío para mantener la actual al editar." />
+
+                <Label Content="Confirmar contraseña" Style="{StaticResource FormLabel}" />
+                <PasswordBox x:Name="ConfirmPasswordInput" Margin="0,0,0,8" PasswordChanged="ConfirmPasswordBox_OnPasswordChanged"
+                             Style="{StaticResource MaterialDesignRevealPasswordBox}"
+                             ToolTip="Repita la contraseña." />
 
                 <CheckBox Content="Usuario activo"
                           IsChecked="{Binding EditIsActive}"

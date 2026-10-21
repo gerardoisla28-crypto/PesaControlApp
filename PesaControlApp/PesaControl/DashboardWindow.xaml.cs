@@ -16,16 +16,27 @@ public partial class DashboardWindow : Window
     private readonly DashboardViewModel _dashboardVm;
     private readonly ScaleManager _scaleManager;
 
-    public DashboardWindow(User currentUser)
+    // La base de datos es realmente asíncrona (PostgreSQL): esperar sus consultas con .GetResult() en el
+    // hilo de la interfaz provoca un bloqueo, así que se cargan aquí antes de crear la ventana.
+    public static async Task<DashboardWindow> CreateAsync(User currentUser)
+    {
+        var dbService = new DatabaseService();
+
+        var scaleManager = new ScaleManager();
+        var scaleConfigs = await LoadScaleConfigsAsync(dbService);
+        await scaleManager.InitializeAsync(scaleConfigs);
+
+        using var configCtx = dbService.CreateContext();
+        var sysConfigs = await new Repository<SystemConfig>(configCtx).GetAllAsync();
+
+        return new DashboardWindow(currentUser, dbService, scaleManager, sysConfigs);
+    }
+
+    private DashboardWindow(User currentUser, DatabaseService dbService, ScaleManager scaleManager, List<SystemConfig> sysConfigs)
     {
         InitializeComponent();
 
-        var dbService = new DatabaseService();
-
-        // Load scale configs and initialize ScaleManager
-        _scaleManager = new ScaleManager();
-        var scaleConfigs = LoadScaleConfigsAsync(dbService).GetAwaiter().GetResult();
-        _scaleManager.InitializeAsync(scaleConfigs).GetAwaiter().GetResult();
+        _scaleManager = scaleManager;
 
         // Choose data service (local for now; remote mode will be added later)
         IWeighingDataService dataService = new LocalWeighingDataService(dbService);
@@ -44,9 +55,6 @@ public partial class DashboardWindow : Window
         var settingsVm = new SettingsViewModel(dbService, _scaleManager, weighingVm, exportImport);
         var catalogsVm = new CatalogsViewModel(dbService);
 
-        var configCtx = dbService.CreateContext();
-        var configRepo = new Repository<SystemConfig>(configCtx);
-        var sysConfigs = configRepo.GetAllAsync().GetAwaiter().GetResult();
         var sysDict = sysConfigs.ToDictionary(c => c.Key, c => c.Value);
         var apiKey = sysDict.GetValueOrDefault("platerecognizer_api_key", "");
         IAnprService? anprService = string.IsNullOrWhiteSpace(apiKey)
