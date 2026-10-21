@@ -411,7 +411,7 @@ namespace PesaControl.Data.Migrations.Sqlite
             modelBuilder.Entity("PesaControl.Core.Models.TicketCounter", b =>
                 {
                     b.Property<string>("Prefix")
-                        .HasMaxLength(10)
+                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("LastNumber")
@@ -625,6 +625,11 @@ namespace PesaControl.Data.Migrations.Sqlite
 
                     b.Property<int?>("ProductId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("StationCode")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
                         .IsRequired()

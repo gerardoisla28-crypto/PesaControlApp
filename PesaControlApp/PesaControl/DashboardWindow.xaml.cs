@@ -76,9 +76,37 @@ public partial class DashboardWindow : Window
         };
 
         DataContext = _dashboardVm;
+        Closing += OnWindowClosing;
 
         _ = InitializeCameraAsync(dbService, weighingVm, controlsVm, anprService, dvrService);
         _ = _dashboardVm.LoadModuleConfigAsync(dbService);
+    }
+
+    private bool _closeConfirmed;
+
+    // Al cerrar la ventana con cambios sin guardar se cancela el cierre y se pregunta; si el usuario
+    // confirma, se vuelve a cerrar. La pregunta y el segundo Close() van después del evento: WPF no permite
+    // llamar a Close() mientras la ventana se está cerrando y la excepción dejaba la app a medio cerrar.
+    private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_closeConfirmed || !_dashboardVm.HasPendingChanges) return;
+
+        e.Cancel = true;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, async () =>
+        {
+            try
+            {
+                if (await _dashboardVm.CanLeaveCurrentAsync())
+                {
+                    _closeConfirmed = true;
+                    Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo cerrar la ventana: {ex.Message}", "PesaControl", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        });
     }
 
     private static async Task<List<ScaleConfig>> LoadScaleConfigsAsync(DatabaseService dbService)

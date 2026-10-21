@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.IO.Ports;
+using System.Text.Json;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PesaControl.Core.Models;
+using PesaControl.Core.Security;
 using PesaControl.Core.Services;
 using PesaControl.Data.Data;
 using PesaControl.Data.Repositories;
@@ -11,7 +13,7 @@ using PesaControl.Data.Services;
 
 namespace PesaControl.UI.ViewModels;
 
-public partial class SettingsViewModel : ObservableObject
+public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _db;
     private readonly ScaleManager? _scaleManager;
@@ -33,6 +35,167 @@ public partial class SettingsViewModel : ObservableObject
         {
             BackupVM = new BackupViewModel(new ExportImportService(db));
         }
+    }
+
+    // ── Puesto ────────────────────────────────────────────
+
+    [ObservableProperty] private string _stationCode = "";
+    [ObservableProperty] private string _stationCodeError = "";
+    [ObservableProperty] private string _stationCodeMessage = "";
+
+    partial void OnStationCodeChanged(string value)
+    {
+        StationCodeError = "";
+        StationCodeMessage = "";
+    }
+
+    [RelayCommand]
+    private async Task SaveStationCodeAsync() => await TrySaveStationCodeAsync();
+
+    private async Task<bool> TrySaveStationCodeAsync()
+    {
+        var code = StationCodePolicy.Normalize(StationCode);
+        if (!StationCodePolicy.IsValid(code))
+        {
+            StationCodeError = StationCodePolicy.Describe();
+            ShowTab(StationTabIndex);
+            return false;
+        }
+
+        try
+        {
+            await _db.SetStationCodeAsync(code);
+            _savedStationCode = code;
+            StationCode = code;
+            StationCodeMessage = $"Código guardado. Los próximos tickets usarán la serie {code}-…";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StationCodeError = $"No se pudo guardar: {ex.Message}";
+            ShowTab(StationTabIndex);
+            return false;
+        }
+    }
+
+    // ── Cambios sin guardar ───────────────────────────────
+
+    private const int StationTabIndex = 1;
+
+    private string _savedStationCode = "";
+    private string _savedModeName = "Local";
+    private string _savedServerPort = "5000";
+    private string _savedServerUrl = "http://192.168.1.100:5000";
+    private string _scaleSnapshot = "";
+
+    private static string SnapshotScale(ScaleConfig? scale) => scale is null ? "" : JsonSerializer.Serialize(scale);
+    private string SnapshotScale() => SnapshotScale(EditingScale);
+
+    private bool StationCodeDirty => StationCodePolicy.Normalize(StationCode) != _savedStationCode;
+    private bool NetworkDirty => SelectedModeName != _savedModeName || ServerPort != _savedServerPort || ServerUrl != _savedServerUrl;
+    private bool ScaleDirty => IsScaleEditorOpen && SnapshotScale() != _scaleSnapshot;
+
+    private const int ScalesTabIndex = 0;
+    private const int NetworkTabIndex = 2;
+
+    private bool IsTabDirty(int tab) => tab switch
+    {
+        ScalesTabIndex => ScaleDirty,
+        StationTabIndex => StationCodeDirty,
+        NetworkTabIndex => NetworkDirty,
+        _ => false
+    };
+
+    private static string TabName(int tab) => tab switch
+    {
+        ScalesTabIndex => "Básculas",
+        StationTabIndex => "Puesto",
+        NetworkTabIndex => "Red",
+        _ => ""
+    };
+
+    public bool HasUnsavedChanges => IsTabDirty(ScalesTabIndex) || IsTabDirty(StationTabIndex) || IsTabDirty(NetworkTabIndex);
+
+    public string UnsavedChangesDescription
+        => string.Join(", ", new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex }.Where(IsTabDirty).Select(TabName));
+
+    // Al guardar desde el aviso se valida primero; si falla, se queda en la pestaña con el error.
+    private async Task<bool> SaveTabAsync(int tab)
+    {
+        switch (tab)
+        {
+            case StationTabIndex:
+                return await TrySaveStationCodeAsync();
+            case NetworkTabIndex:
+                await SaveConfigAsync();
+                return !NetworkDirty;
+            case ScalesTabIndex:
+                await SaveScaleAsync();
+                return !IsScaleEditorOpen;
+            default:
+                return true;
+        }
+    }
+
+    private void DiscardTab(int tab)
+    {
+        switch (tab)
+        {
+            case StationTabIndex:
+                StationCode = _savedStationCode;
+                StationCodeError = "";
+                break;
+            case NetworkTabIndex:
+                SelectedModeName = _savedModeName;
+                ServerPort = _savedServerPort;
+                ServerUrl = _savedServerUrl;
+                break;
+            case ScalesTabIndex:
+                if (IsScaleEditorOpen) CancelScaleEditor();
+                break;
+        }
+    }
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex }.Where(IsTabDirty))
+            if (!await SaveTabAsync(tab)) return false;
+        return true;
+    }
+
+    public void DiscardChanges()
+    {
+        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex })
+            DiscardTab(tab);
+    }
+
+    // Cambiar de pestaña dentro de Configuración también pregunta si la pestaña que se deja tiene cambios.
+    public bool IsTabWithUnsavedChanges(int tab) => IsTabDirty(tab);
+
+    public async Task<bool> CanLeaveTabAsync(int tab)
+    {
+        if (!IsTabDirty(tab)) return true;
+
+        switch (UnsavedChangesDialog.Ask(TabName(tab)))
+        {
+            case UnsavedChangesChoice.Save:
+                return await SaveTabAsync(tab);
+            case UnsavedChangesChoice.Discard:
+                DiscardTab(tab);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // Evita que un cambio de pestaña hecho por el propio código (por ejemplo, para mostrar un error) vuelva a preguntar.
+    public bool SuppressTabGuard { get; private set; }
+
+    private void ShowTab(int tab)
+    {
+        SuppressTabGuard = true;
+        SelectedTabIndex = tab;
+        SuppressTabGuard = false;
     }
 
     // ── Básculas ──────────────────────────────────────────
@@ -72,6 +235,7 @@ public partial class SettingsViewModel : ObservableObject
             SortOrder = ScaleConfigs.Count
         };
         SelectedProtocolName = "Serial";
+        _scaleSnapshot = SnapshotScale();
         IsScaleEditorOpen = true;
     }
 
@@ -105,6 +269,7 @@ public partial class SettingsViewModel : ObservableObject
             ProtocolType.SensocarA12 => "Sensocar A12",
             _ => "Serial"
         };
+        _scaleSnapshot = SnapshotScale();
         IsScaleEditorOpen = true;
     }
 
@@ -197,6 +362,7 @@ public partial class SettingsViewModel : ObservableObject
         var repo = new Repository<SystemConfig>(ctx);
         var configs = await repo.GetAllAsync();
         var dict = configs.ToDictionary(c => c.Key, c => c.Value);
+        var stationCode = await _db.GetStationCodeAsync() ?? "";
 
         App.Current.Dispatcher.Invoke(() =>
         {
@@ -209,6 +375,14 @@ public partial class SettingsViewModel : ObservableObject
 
             ServerPort = dict.GetValueOrDefault("server_port", "5000");
             ServerUrl = dict.GetValueOrDefault("server_url", "http://192.168.1.100:5000");
+
+            StationCode = stationCode;
+            _savedStationCode = stationCode;
+            _savedModeName = SelectedModeName;
+            _savedServerPort = ServerPort;
+            _savedServerUrl = ServerUrl;
+            StationCodeError = "";
+            StationCodeMessage = "";
 
             StatusMessage = "Configuración cargada";
         });
@@ -234,6 +408,9 @@ public partial class SettingsViewModel : ObservableObject
             await UpsertAsync(repo, "server_port", ServerPort);
             await UpsertAsync(repo, "server_url", ServerUrl);
 
+            _savedModeName = SelectedModeName;
+            _savedServerPort = ServerPort;
+            _savedServerUrl = ServerUrl;
             StatusMessage = "Configuración guardada correctamente";
         }
         catch (Exception ex)

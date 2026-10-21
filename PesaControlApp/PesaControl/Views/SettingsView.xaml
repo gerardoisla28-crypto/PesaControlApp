@@ -15,7 +15,8 @@
 
         <TextBlock Grid.Row="0" Text="Configuración del Sistema" Style="{StaticResource SectionTitle}" FontSize="20" Margin="0,0,0,8" />
 
-        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+        <TabControl x:Name="SettingsTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}"
+                    SelectionChanged="SettingsTabs_SelectionChanged">
             <!-- TAB: Básculas -->
             <TabItem Header="Básculas">
                 <Grid>
@@ -204,6 +205,38 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+            </TabItem>
+
+            <!-- TAB: Puesto -->
+            <TabItem Header="Puesto">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,8,15,0">
+                        <Border Style="{StaticResource CardPanel}">
+                            <StackPanel>
+                                <TextBlock Text="Código del puesto" Style="{StaticResource SectionTitle}" />
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Text="Identifica este puesto en los números de ticket (por ejemplo STGO-2026-10-0001). Ejemplos: Santiago = STGO, Región Metropolitana = RM." />
+
+                                <Label Content="Código (1 a 4 caracteres, letras y números) *" Style="{StaticResource FormLabel}" />
+                                <TextBox Text="{Binding StationCode, UpdateSourceTrigger=PropertyChanged}"
+                                         MaxLength="4" CharacterCasing="Upper" Width="160" HorizontalAlignment="Left" />
+                                <TextBlock Text="{Binding StationCodeError}" Foreground="{StaticResource AccentRedBrush}"
+                                           FontSize="12" TextWrapping="Wrap" MinHeight="16" Margin="2,3,0,6" />
+
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Foreground="{StaticResource AccentOrangeBrush}"
+                                           Text="Cada puesto de la empresa debe tener un código distinto. Si lo cambia, los tickets ya emitidos conservan su código y los nuevos empiezan una serie nueva." />
+
+                                <TextBlock Text="* Campo obligatorio" FontSize="12" Margin="0,0,0,10"
+                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                                <Button Content="Guardar" Command="{Binding SaveStationCodeCommand}"
+                                        Style="{StaticResource SuccessButton}" HorizontalAlignment="Left" />
+                                <TextBlock Text="{Binding StationCodeMessage}" Style="{StaticResource StatusMessage}" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- TAB: Modo operación -->

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using PesaControl.Core.Models;
 using PesaControl.Core.Services;
 using PesaControl.Data.Data;
@@ -14,12 +15,50 @@ public class LocalWeighingDataService : IWeighingDataService
         _db = db;
     }
 
+    // El número se asigna en la misma transacción que guarda el pesaje: si el guardado falla, el contador
+    // se revierte con él y la serie del puesto no queda con huecos.
     public async Task<WeighingRecord> CreateAsync(WeighingRecord record)
     {
+        var stationCode = await _db.GetStationCodeAsync()
+            ?? throw new InvalidOperationException("El código de puesto no está configurado.");
+
         using var ctx = _db.CreateContext();
+        await using var transaction = await ctx.Database.BeginTransactionAsync();
+
+        record.StationCode = stationCode;
+        record.TicketNumber = await NextTicketNumberAsync(ctx, stationCode);
         ctx.WeighingRecords.Add(record);
         await ctx.SaveChangesAsync();
+
+        await transaction.CommitAsync();
         return record;
+    }
+
+    // Un solo INSERT ... ON CONFLICT incrementa el contador de la serie (puesto y mes) de forma atómica.
+    // Si el contador aún no existe (por ejemplo, tras restaurar un respaldo), parte del mayor número ya usado.
+    private static async Task<string> NextTicketNumberAsync(AppDbContext ctx, string stationCode)
+    {
+        var prefix = $"{stationCode}-{DateTime.Now.Year}-{DateTime.Now.Month:D2}-";
+
+        var connection = ctx.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.Transaction = ctx.Database.CurrentTransaction!.GetDbTransaction();
+        command.CommandText = """
+            INSERT INTO "TicketCounters" ("Prefix", "LastNumber")
+            VALUES (@prefix, COALESCE((
+                SELECT MAX(CAST(substr("TicketNumber", length(@prefix) + 1) AS integer))
+                FROM "WeighingRecords"
+                WHERE "TicketNumber" GLOB (@prefix || '[0-9]*')), 0) + 1)
+            ON CONFLICT ("Prefix") DO UPDATE SET "LastNumber" = "TicketCounters"."LastNumber" + 1
+            RETURNING "LastNumber"
+            """;
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "prefix";
+        parameter.Value = prefix;
+        command.Parameters.Add(parameter);
+
+        var next = Convert.ToInt32(await command.ExecuteScalarAsync());
+        return $"{prefix}{next:D4}";
     }
 
     public async Task UpdateAsync(WeighingRecord record)
@@ -78,37 +117,6 @@ public class LocalWeighingDataService : IWeighingDataService
             .Where(w => w.WeighInTime >= DateTime.Today)
             .OrderByDescending(w => w.WeighInTime)
             .ToListAsync();
-    }
-
-    // Un solo INSERT ... ON CONFLICT incrementa el contador del mes de forma atómica, así que dos puestos
-    // que piden un número a la vez nunca reciben el mismo. Si el contador del mes aún no existe (por
-    // ejemplo, tras restaurar un respaldo), parte del mayor número ya usado.
-    public async Task<string> GetNextTicketAsync()
-    {
-        using var ctx = _db.CreateContext();
-        var prefix = $"{DateTime.Now.Year}-{DateTime.Now.Month:D2}-";
-
-        var connection = ctx.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-            await connection.OpenAsync();
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO "TicketCounters" ("Prefix", "LastNumber")
-            VALUES (@prefix, COALESCE((
-                SELECT MAX(CAST(substr("TicketNumber", length(@prefix) + 1) AS integer))
-                FROM "WeighingRecords"
-                WHERE "TicketNumber" GLOB (@prefix || '[0-9]*')), 0) + 1)
-            ON CONFLICT ("Prefix") DO UPDATE SET "LastNumber" = "TicketCounters"."LastNumber" + 1
-            RETURNING "LastNumber"
-            """;
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "prefix";
-        parameter.Value = prefix;
-        command.Parameters.Add(parameter);
-
-        var next = Convert.ToInt32(await command.ExecuteScalarAsync());
-        return $"{prefix}{next:D4}";
     }
 
     public async Task<List<Product>> GetProductsAsync()

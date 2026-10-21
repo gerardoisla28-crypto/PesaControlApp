@@ -32,6 +32,17 @@ namespace PesaControl
                     createdAdmin = setup.CreatedUsername;
                 }
 
+                // Sin código de puesto no se puede numerar tickets; también cubre bases creadas antes de este paso.
+                if (await database.GetStationCodeAsync() is null)
+                {
+                    var stationSetup = new StationCodeWindow(database);
+                    if (stationSetup.ShowDialog() != true || !stationSetup.Completed)
+                    {
+                        Shutdown();
+                        return;
+                    }
+                }
+
                 var login = new UI.MainWindow(database, createdAdmin);
                 MainWindow = login;
                 ShutdownMode = ShutdownMode.OnLastWindowClose;

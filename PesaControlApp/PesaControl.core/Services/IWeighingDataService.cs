@@ -11,7 +11,6 @@ public interface IWeighingDataService
     Task<WeighingRecord?> GetActiveByPlateAsync(string plate);
     Task<List<WeighingRecord>> GetActiveAsync();
     Task<List<WeighingRecord>> GetTodayAsync();
-    Task<string> GetNextTicketAsync();
 
     Task<List<Product>> GetProductsAsync();
     Task<List<Company>> GetCompaniesAsync();

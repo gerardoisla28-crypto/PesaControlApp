@@ -8,7 +8,7 @@ using PesaControl.Core.Security;
 
 namespace PesaControl.UI.ViewModels;
 
-public partial class UsersViewModel : ObservableObject
+public partial class UsersViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _db;
     private readonly User _currentUser;
@@ -31,12 +31,31 @@ public partial class UsersViewModel : ObservableObject
 
     [ObservableProperty] private string _statusMessage = "";
 
+    private readonly EditorTracker _editor;
+
+    partial void OnIsEditorOpenChanged(bool value)
+    {
+        if (!value) _editor.End();
+    }
+
+    public bool HasUnsavedChanges => IsEditorOpen && _editor.IsDirty;
+    public string UnsavedChangesDescription => "Usuario";
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        await SaveUserAsync();
+        return !IsEditorOpen;
+    }
+
+    public void DiscardChanges() => CancelEdit();
+
     public List<string> Roles { get; }
 
     public UsersViewModel(DatabaseService db, User currentUser)
     {
         _db = db;
         _currentUser = currentUser;
+        _editor = new EditorTracker(() => EditorTracker.Snap(EditUsername, EditFullName, EditEmail, EditRole, EditIsActive, EditPassword, EditPasswordConfirm));
         Roles = currentUser.Role == UserRoles.SuperAdmin
             ? [UserRoles.SuperAdmin, UserRoles.Admin, UserRoles.Operator, UserRoles.Viewer]
             : [UserRoles.Operator, UserRoles.Viewer];
@@ -77,6 +96,7 @@ public partial class UsersViewModel : ObservableObject
         EditRole = "Operator";
         EditIsActive = true;
         IsEditing = false;
+        _editor.Begin();
         IsEditorOpen = true;
     }
 
@@ -98,6 +118,7 @@ public partial class UsersViewModel : ObservableObject
         EditRole = SelectedUser.Role;
         EditIsActive = SelectedUser.IsActive;
         IsEditing = true;
+        _editor.Begin();
         IsEditorOpen = true;
     }
 

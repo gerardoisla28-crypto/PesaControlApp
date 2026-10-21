@@ -40,6 +40,7 @@ public abstract class AppDbContext : DbContext
             entity.ToTable("WeighingRecords");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.TicketNumber).HasMaxLength(20);
+            entity.Property(e => e.StationCode).HasMaxLength(4);
             entity.Property(e => e.LicensePlate).HasMaxLength(20);
             entity.Property(e => e.PlateCountry).HasMaxLength(2).HasDefaultValue("CL");
             entity.Property(e => e.OperatorName).HasMaxLength(100);
@@ -64,7 +65,7 @@ public abstract class AppDbContext : DbContext
         {
             entity.ToTable("TicketCounters");
             entity.HasKey(e => e.Prefix);
-            entity.Property(e => e.Prefix).HasMaxLength(10);
+            entity.Property(e => e.Prefix).HasMaxLength(20);
         });
 
         modelBuilder.Entity<User>(entity =>

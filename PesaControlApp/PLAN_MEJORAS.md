@@ -73,15 +73,16 @@ Cada puesto guarda y numera en un **almacén local** y sincroniza con el servido
 - **Relojes:** guardar la hora del puesto y la de recepción en el servidor.
 
 ### Tareas
-- [ ] Definir el código de puesto en la configuración por puesto.
+- [x] Código de puesto: 1 a 4 caracteres (letras y números, en mayúsculas), se pide en el primer arranque justo después de crear el Admin (también si una base existente no lo tiene) y el Admin puede cambiarlo en Configuración › Puesto. Vive solo en el almacén local y **no viaja en los respaldos**. *Hecho en la rama `feature/station-series`.*
 - [x] (parte 1) Almacén local SQLite en cada puesto, con `LocalDbContext` y `CentralDbContext` sobre un modelo compartido y migraciones por proveedor. *Hecho en la rama `feature/local-store`.*
-- [ ] Reemplazo del contador central interino por el contador local por serie de puesto.
-- [ ] Agregar a los pesajes: código de puesto, versión o fecha de modificación y estado de sincronización.
+- [x] Contador local por serie de puesto, asignado en `CreateAsync` dentro de la misma transacción que guarda el pesaje (formato `STGO-2026-10-0001`, reinicio mensual). Probado: 100 pesajes concurrentes sin huecos y un guardado fallido no consume número. *Hecho.*
+- [ ] Agregar a los pesajes: versión o fecha de modificación y estado de sincronización. *(Ya tienen el código de puesto, `StationCode`.)*
 - [ ] Servicio de sincronización en segundo plano (subir pendientes, bajar catálogos y tickets abiertos), con reintentos.
 - [ ] **Exportación incremental a archivo** (pesajes pendientes desde la última exportación, con sus fotos) e **importación que fusiona sin borrar** (no reutilizar tal cual la restauración actual, que vacía las tablas).
 - [ ] Registro manual de salida en otro puesto.
 - [ ] Copia local de usuarios para el login sin conexión.
 - [ ] Indicador visible del estado de conexión y de los registros pendientes de sincronizar.
+- [ ] Revisar la pestaña "Red" de Configuración (modos Local, Servidor y Cliente con puerto y URL): es anterior a este diseño y probablemente se reemplace por la configuración de sincronización con el servidor central.
 - [ ] Ampliar `ExportImportService` y su `ExportPackage` (hoy exporta todo y la importación reemplaza todo).
 
 ## Multi-puesto (nuevo, implica cambios en el código)
@@ -93,7 +94,7 @@ Estado actual: las fotos se guardan en `%LocalAppData%\PesaControl\Photos` con r
 - [ ] Si la red falla, guardar la foto en local y subirla después.
 - [ ] Quitar el `catch { }` vacío al guardar fotos: hoy un fallo pasa desapercibido.
 - [ ] Separar la **configuración por puesto** (báscula, puerto serie, cámaras, impresora) de la configuración compartida.
-- [x] (interino) Numeración de tickets sin duplicados con un contador central; será reemplazada por la serie por puesto. *Hecho: contador atómico por mes (`TicketCounters`, `INSERT ... ON CONFLICT`); probado con 4 puestos simulados y 100 peticiones simultáneas. Si se pierde un número (p. ej. falla el guardado después de pedirlo) queda un hueco en la secuencia.*
+- [x] Numeración de tickets sin duplicados entre puestos: resuelta con la serie por puesto (ver la sección local-first). *Antes, interino: contador atómico por mes (`TicketCounters`, `INSERT ... ON CONFLICT`); probado con 4 puestos simulados y 100 peticiones simultáneas. Si se pierde un número (p. ej. falla el guardado después de pedirlo) queda un hueco en la secuencia.*
 - [ ] Control de concurrencia: dos puestos editando o cerrando el mismo ticket.
 - [x] Qué hace un puesto sin conexión: **definido**, puede pesar con y sin conexión (ver la sección local-first).
 - [ ] Registrar en la auditoría desde qué puesto se hizo cada acción.
@@ -187,11 +188,18 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] Dejar `SerialTest` fuera del instalador y documentado.
 - [ ] CI mínimo con `dotnet build` y `dotnet test`.
 - [ ] README y manual de instalación y soporte.
+- [ ] **Verificación manual pendiente del aviso de cambios sin guardar** en Usuarios, Catálogos y Control (editor de dispositivos). Está implementado (`IUnsavedChanges` y `EditorTracker`) y probado con la lógica de Configuración, pero no con estas pantallas en la app real. Comprobar:
+  - Abrir un formulario de usuario, escribir algo y pulsar otra sección del menú: debe preguntar.
+  - Abrir un formulario de catálogo (producto, empresa, operador o conductor), escribir algo y cerrar la ventana: debe preguntar.
+  - Abrir y cancelar un formulario **sin cambios**: no debe preguntar.
+  - Control: lo mismo con el editor de dispositivos, barrera y semáforo.
+  - "Guardar y continuar" con un formulario inválido (falta un dato obligatorio): debe quedarse en la pantalla.
+  - Al cerrar la app con el aviso, comprobar en el Administrador de tareas que el proceso termina; si queda abierto, revisar el cierre de hilos de cámara y puerto serie.
 
 ## Orden de trabajo sugerido
 
 1. ~~Migración a PostgreSQL y migración inicial limpia (A1).~~ Hecho.
-2. **Siguiente:** operación con y sin conexión: (a) código de puesto y configuración por puesto, (b) almacén local con serie por puesto, (c) exportación e importación por archivo, (d) sincronización con el servidor, (e) registro manual de salida, (f) fotos compartidas y concurrencia.
+2. **Siguiente:** operación con y sin conexión: (a) ~~código de puesto~~ y ~~almacén local con serie por puesto~~ (hechos), (b) resto de la configuración por puesto, (c) exportación e importación por archivo, (d) sincronización con el servidor, (e) registro manual de salida, (f) fotos compartidas y concurrencia.
 3. Registro de errores, auditoría (con el puesto de origen) y protección del último SuperAdmin.
 4. Primer arranque dentro de la app e instalador con los dos modos (servidor + puesto, solo puesto).
 5. Pruebas sobre la lógica de pesaje (con PostgreSQL de prueba o contenedor, no SQLite en memoria).

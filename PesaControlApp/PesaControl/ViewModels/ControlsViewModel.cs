@@ -18,7 +18,7 @@ public class ArduinoDeviceOption
     public string PortName => BarrierConfig.PortName;
 }
 
-public partial class ControlsViewModel : ObservableObject
+public partial class ControlsViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _dbService;
     private bool _isSyncing;
@@ -31,6 +31,40 @@ public partial class ControlsViewModel : ObservableObject
     [ObservableProperty] private string _statusMessage = "Listo";
 
     public ObservableCollection<ArduinoDeviceOption> Devices { get; } = new();
+
+    // ── Cambios sin guardar ──
+    private readonly EditorTracker _deviceEditor;
+
+    partial void OnIsDeviceEditorOpenChanged(bool value)
+    {
+        if (!value) _deviceEditor.End();
+    }
+
+    private bool DeviceDirty => IsDeviceEditorOpen && _deviceEditor.IsDirty;
+
+    public bool HasUnsavedChanges => DeviceDirty || BarrierVM.HasUnsavedChanges || TrafficLightVM.HasUnsavedChanges;
+
+    public string UnsavedChangesDescription => string.Join(", ", new[]
+    {
+        DeviceDirty ? "Dispositivo" : null,
+        BarrierVM.HasUnsavedChanges ? BarrierVM.UnsavedChangesDescription : null,
+        TrafficLightVM.HasUnsavedChanges ? TrafficLightVM.UnsavedChangesDescription : null
+    }.Where(x => x is not null));
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        if (DeviceDirty) { await SaveDeviceAsync(); if (IsDeviceEditorOpen) return false; }
+        if (BarrierVM.HasUnsavedChanges && !await BarrierVM.SaveChangesAsync()) return false;
+        if (TrafficLightVM.HasUnsavedChanges && !await TrafficLightVM.SaveChangesAsync()) return false;
+        return true;
+    }
+
+    public void DiscardChanges()
+    {
+        CancelDeviceEditor();
+        BarrierVM.DiscardChanges();
+        TrafficLightVM.DiscardChanges();
+    }
 
     // ── Editor ──
     [ObservableProperty] private bool _isDeviceEditorOpen;
@@ -47,6 +81,7 @@ public partial class ControlsViewModel : ObservableObject
     {
         _dbService = dbService;
         BarrierVM = barrierVm;
+        _deviceEditor = new EditorTracker(() => EditorTracker.Snap(EditingName, EditingPort, EditingBaudRate));
         TrafficLightVM = trafficLightVm;
 
         BarrierVM.PropertyChanged += OnBarrierPropertyChanged;
@@ -103,6 +138,7 @@ public partial class ControlsViewModel : ObservableObject
         EditingName = $"Arduino {Devices.Count + 1}";
         EditingPort = "COM3";
         EditingBaudRate = 9600;
+        _deviceEditor.Begin();
         IsDeviceEditorOpen = true;
     }
 
@@ -115,6 +151,7 @@ public partial class ControlsViewModel : ObservableObject
         EditingName = SelectedDevice.Name;
         EditingPort = SelectedDevice.PortName;
         EditingBaudRate = SelectedDevice.BarrierConfig.BaudRate;
+        _deviceEditor.Begin();
         IsDeviceEditorOpen = true;
     }
 
