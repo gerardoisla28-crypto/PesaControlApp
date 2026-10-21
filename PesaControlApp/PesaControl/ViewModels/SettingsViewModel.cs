@@ -4,6 +4,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PesaControl.Core.Models;
+using PesaControl.Core.Security;
 using PesaControl.Core.Services;
 using PesaControl.Data.Data;
 using PesaControl.Data.Repositories;
@@ -32,6 +33,40 @@ public partial class SettingsViewModel : ObservableObject
         else
         {
             BackupVM = new BackupViewModel(new ExportImportService(db));
+        }
+    }
+
+    // ── Puesto ────────────────────────────────────────────
+
+    [ObservableProperty] private string _stationCode = "";
+    [ObservableProperty] private string _stationCodeError = "";
+    [ObservableProperty] private string _stationCodeMessage = "";
+
+    partial void OnStationCodeChanged(string value)
+    {
+        StationCodeError = "";
+        StationCodeMessage = "";
+    }
+
+    [RelayCommand]
+    private async Task SaveStationCodeAsync()
+    {
+        var code = StationCodePolicy.Normalize(StationCode);
+        if (!StationCodePolicy.IsValid(code))
+        {
+            StationCodeError = StationCodePolicy.Describe();
+            return;
+        }
+
+        try
+        {
+            await _db.SetStationCodeAsync(code);
+            StationCode = code;
+            StationCodeMessage = $"Código guardado. Los próximos tickets usarán la serie {code}-…";
+        }
+        catch (Exception ex)
+        {
+            StationCodeError = $"No se pudo guardar: {ex.Message}";
         }
     }
 
@@ -197,6 +232,7 @@ public partial class SettingsViewModel : ObservableObject
         var repo = new Repository<SystemConfig>(ctx);
         var configs = await repo.GetAllAsync();
         var dict = configs.ToDictionary(c => c.Key, c => c.Value);
+        var stationCode = await _db.GetStationCodeAsync() ?? "";
 
         App.Current.Dispatcher.Invoke(() =>
         {
@@ -209,6 +245,10 @@ public partial class SettingsViewModel : ObservableObject
 
             ServerPort = dict.GetValueOrDefault("server_port", "5000");
             ServerUrl = dict.GetValueOrDefault("server_url", "http://192.168.1.100:5000");
+
+            StationCode = stationCode;
+            StationCodeError = "";
+            StationCodeMessage = "";
 
             StatusMessage = "Configuración cargada";
         });
