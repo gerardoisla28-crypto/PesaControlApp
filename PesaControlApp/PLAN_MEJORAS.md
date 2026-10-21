@@ -4,6 +4,35 @@ Objetivo: dejar PesaControl terminado y estable para empezar a venderlo, tomando
 
 > Basado en la estructura de archivos y búsquedas puntuales (`EnsureCreated`, cadena de conexión SQLite, `catch` genéricos). No es una auditoría completa: validar cada punto antes de ejecutarlo.
 
+## Avance (actualizado el 2026-10-20)
+
+Todo lo hecho está en la rama `feature/postgresql` (aún sin fusionar a `dev`). Probado contra PostgreSQL 18 local: el login entra al panel.
+
+### Hecho
+- [x] **A1: migración a PostgreSQL** con migración inicial limpia (`InitialCreate`), `MigrateAsync` en lugar de `EnsureCreated`, y sin el SQL crudo de SQLite. `dotnet-ef` queda como herramienta local.
+- [x] **Cadena de conexión** desde la variable de entorno `PESACONTROL_DB` o `dbsettings.json` (ignorado por git; plantilla en `dbsettings.example.json`).
+- [x] **Importación de respaldos transaccional**: ya no borra un archivo `.db`; vacía las tablas dentro de una transacción y realinea las secuencias de IDs.
+- [x] **Fechas**: guardadas como `timestamp without time zone` (hora local). Un convertidor pasa a local las fechas en UTC al guardar (`LocalDateTimeConverter`).
+- [x] **Políticas de credenciales** (`PesaControl.core/Security`):
+  - Contraseña: 14 a 128 caracteres para SuperAdmin y Admin; 8 a 128 para Operator y Viewer. Sin reglas de composición (criterio NIST).
+  - Usuario: 3 a 50 caracteres ASCII (letras, números, punto, guion y guion bajo), sin espacios. El login distingue mayúsculas y minúsculas.
+  - Nombre completo: espacios normalizados y máximo 100 caracteres.
+- [x] **Pantalla "Crear Admin"**: usuario libre, nombre y apellido obligatorios, contraseña con confirmación y ojito, errores bajo cada campo, campos obligatorios marcados con `*`.
+- [x] **Gestión de usuarios**: aplica las políticas y pide confirmar la contraseña; los campos de contraseña se limpian al reabrir el editor.
+- [x] **Arranque**: la base se inicializa en `App.OnStartup`; si no hay Admin se muestra solo "Crear Admin" y luego el login, con un mensaje de confirmación.
+- [x] **Login**: errores bajo cada campo y un único mensaje para credenciales incorrectas, Enter para ingresar, botones minimizar y cerrar, cierre con Esc y arrastre de la ventana.
+- [x] **Bloqueo al entrar al panel corregido**: `DashboardWindow` esperaba consultas con `.GetAwaiter().GetResult()` en el hilo de la interfaz, lo que con PostgreSQL provoca un bloqueo mutuo. Ahora se carga con `DashboardWindow.CreateAsync`. El comando "Ver detalle" de registros tenía el mismo problema.
+- [x] **Documentación**: `REQUISITOS_CLIENTE.md` y `AGENTS.md` actualizados.
+
+### Aprendizajes y riesgos que quedaron
+- **Esperas síncronas sobre código asíncrono**: con SQLite pasaban desapercibidas; con PostgreSQL congelan la interfaz. Quedan dos `.GetResult()` en `SensocarA12Protocol` y `SensocProtocol` (puerto serie al cerrar, no base de datos); revisar si hay otros al añadir módulos.
+- **Fechas**: usar `DateTime.UtcNow` o `DateTime.Now` es indistinto para la base gracias al convertidor, pero conviene unificar el criterio al implementar la auditoría.
+- **Faltan pruebas automáticas contra PostgreSQL**: tanto el error de las fechas como el del bloqueo habrían aparecido en una prueba de integración básica (crear usuario, iniciar sesión, abrir el panel).
+- **Pendientes menores detectados**:
+  - Al renombrar un usuario no se comprueba que el nuevo nombre no esté en uso por otro (la base lo impide, pero con un error técnico).
+  - Hay `catch` vacíos en el flujo de arranque y de cámaras.
+  - El login muestra "No se pudo conectar con la base de datos" para cualquier excepción; conviene registrar la causa real cuando exista el registro de errores.
+
 ## Decisiones tomadas
 
 - **Multi-puesto desde el inicio**: varios puestos de pesaje comparten los mismos registros.
@@ -11,6 +40,9 @@ Objetivo: dejar PesaControl terminado y estable para empezar a venderlo, tomando
 - **Fotos de cámaras: archivos en una carpeta compartida del servidor**, no dentro de la base. La base guarda la ruta relativa.
 - **El servidor puede ser un PC normal** del cliente (siempre encendido, IP fija). Ver [REQUISITOS_CLIENTE.md](REQUISITOS_CLIENTE.md).
 - **Dos modos de instalación**: "servidor + puesto" y "solo puesto".
+- **Fechas en hora local sin zona horaria**: todos los puestos de una instalación comparten zona horaria.
+- **Usuario sensible a mayúsculas y minúsculas** en el login, a propósito.
+- **Contraseñas**: se prioriza el largo sobre la complejidad; el mínimo es menor para Operator y Viewer, que las escriben con frecuencia en el puesto.
 
 ## Decisiones pendientes
 
@@ -37,7 +69,7 @@ Estado actual: las fotos se guardan en `%LocalAppData%\PesaControl\Photos` con r
 
 Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada uno. Ordenados de mayor a menor riesgo.
 
-### 1. Migrar a PostgreSQL con migraciones EF puras
+### 1. Migrar a PostgreSQL con migraciones EF puras — **HECHO** (rama `feature/postgresql`, 2026-10-20)
 - Archivos: `PesaControl.data/Data/DatabaseService.cs:25`, `PesaControl.data/Services/ExportImportService.cs:146`.
 - Hoy: SQLite con `EnsureCreated`, una sola migración (`AddDvrSupport`) y ajustes manuales (`MigrateLegacyScaleConfigAsync`, SQL crudo tipo `ALTER TABLE ... TEXT`).
 - No hay clientes con datos, así que **no hace falta detectar bases existentes ni insertar baseline a mano**. Basta con:
@@ -73,17 +105,19 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 ### 5. Hash de contraseñas
 - Mantener Argon2id (mejor que el BCrypt de Weight-Trak). **No cambiar.**
 
-### 6. Esquema de roles y usuarios
+### 6. Esquema de roles y usuarios — **parcial**
+- Hecho: políticas de contraseña, usuario y nombre por rol; creación del Admin dentro de la app. El SuperAdmin sigue creándose con `Provisioner`.
+- Pendiente: protección del último SuperAdmin e inyección de dependencias.
 - Riesgo medio: hay que migrar los usuarios existentes. `AuthService` se crea con `new AuthService()`.
 - Hacerlo junto con la inyección de dependencias.
 
 ## B. Cambios seguros
 
 ### Imprescindibles para vender
-- [ ] **Pruebas automáticas** (hoy hay cero). Prioridad: `WeighingService`, protocolos de báscula (con tramas grabadas), `Argon2idPasswordHasher`, repositorios con SQLite en memoria, `ExportImportService`. Usar los fakes de Weight-Trak como modelo.
+- [ ] **Pruebas automáticas** (hoy hay cero). Prioridad: `WeighingService`, protocolos de báscula (con tramas grabadas), `Argon2idPasswordHasher`, repositorios contra un PostgreSQL de prueba (no SQLite en memoria: se comporta distinto con fechas y concurrencia), `ExportImportService`. Incluir pruebas de integración de los flujos básicos (crear usuario, iniciar sesión, abrir el panel). Usar los fakes de Weight-Trak como modelo.
 - [ ] **Auditoría**: registrar quién hizo qué (login, anulación o edición de pesajes, cambios de configuración y de usuarios).
 - [ ] **Protección del último SuperAdmin**: no permitir eliminarlo ni degradarlo (`GuardaUltimoSuperAdmin` en Weight-Trak).
-- [ ] **Pantalla de primer arranque** dentro de la app, que reemplace al proyecto `Provisioner`.
+- [ ] **Pantalla de primer arranque** dentro de la app, que reemplace al proyecto `Provisioner`. *Avance: ya crea el Admin dentro de la app; falta el SuperAdmin y los modos servidor/puesto.*
 - [ ] **Instalador** (MSIX, WiX o Inno Setup):
   - Datos en `%ProgramData%` o `%AppData%`, no junto al ejecutable.
   - Runtime incluido (self-contained).
@@ -101,7 +135,7 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] Maestros más completos: transportistas, clientes, lugares, vehículos (revisar qué cubre `CatalogsViewModel`).
 - [ ] Flujos de recepción, despacho y servicio, con tipos de ticket.
 - [ ] Reportes por folio y fechas; añadir exportación a Word (Excel y PDF ya existen).
-- [ ] Control de contraseña reutilizable.
+- [ ] Control de contraseña reutilizable. *Avance: ya existe la confirmación con ojito en "Crear Admin" y en usuarios, pero está duplicada en XAML; extraerla a un control compartido.*
 
 ### Opcional
 - [ ] **Importación de catálogos desde Excel/CSV con plantilla**, para clientes que vienen de otro software de pesaje y quieren cargar sus maestros (transportistas, clientes, lugares, vehículos, productos).
@@ -120,8 +154,8 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 
 ## Orden de trabajo sugerido
 
-1. Migración a PostgreSQL y migración inicial limpia (A1).
-2. Multi-puesto: fotos con ruta relativa y carpeta compartida, configuración por puesto, numeración y concurrencia.
+1. ~~Migración a PostgreSQL y migración inicial limpia (A1).~~ Hecho.
+2. **Siguiente:** multi-puesto: fotos con ruta relativa y carpeta compartida, configuración por puesto, numeración y concurrencia.
 3. Registro de errores, auditoría (con el puesto de origen) y protección del último SuperAdmin.
 4. Primer arranque dentro de la app e instalador con los dos modos (servidor + puesto, solo puesto).
 5. Pruebas sobre la lógica de pesaje (con PostgreSQL de prueba o contenedor, no SQLite en memoria).
