@@ -436,8 +436,8 @@ namespace PesaControl.Data.Migrations.Postgres
             modelBuilder.Entity("PesaControl.Core.Models.TicketCounter", b =>
                 {
                     b.Property<string>("Prefix")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<int>("LastNumber")
                         .HasColumnType("integer");
@@ -658,6 +658,11 @@ namespace PesaControl.Data.Migrations.Postgres
 
                     b.Property<int?>("ProductId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("StationCode")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
 
                     b.Property<string>("Status")
                         .IsRequired()

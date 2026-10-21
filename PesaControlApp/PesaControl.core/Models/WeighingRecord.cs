@@ -12,6 +12,7 @@ public class WeighingRecord
 {
     public int Id { get; set; }
     public string TicketNumber { get; set; } = "";
+    public string StationCode { get; set; } = "";
     public DateTime WeighInTime { get; set; }
     public DateTime? WeighOutTime { get; set; }
     public decimal GrossWeight { get; set; }

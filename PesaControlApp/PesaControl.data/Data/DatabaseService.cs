@@ -33,6 +33,33 @@ public class DatabaseService
 
     public AppDbContext CreateContext() => new LocalDbContext(_databasePath);
 
+    public const string StationCodeKey = "station_code";
+
+    // El código identifica la serie de tickets de este puesto; vive solo en el almacén local.
+    public async Task<string?> GetStationCodeAsync()
+    {
+        await using var context = CreateContext();
+        var value = await context.SystemConfigs
+            .Where(c => c.Key == StationCodeKey)
+            .Select(c => c.Value)
+            .FirstOrDefaultAsync();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    public async Task SetStationCodeAsync(string code)
+    {
+        code = StationCodePolicy.Normalize(code);
+        if (!StationCodePolicy.IsValid(code)) throw new ArgumentException(StationCodePolicy.Describe());
+
+        await using var context = CreateContext();
+        var config = await context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == StationCodeKey);
+        if (config is null)
+            context.SystemConfigs.Add(new SystemConfig { Key = StationCodeKey, Value = code });
+        else
+            config.Value = code;
+        await context.SaveChangesAsync();
+    }
+
     public async Task<bool> HasAdminAsync()
     {
         await using var context = CreateContext();

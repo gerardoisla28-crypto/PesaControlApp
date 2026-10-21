@@ -134,6 +134,9 @@ public class ExportImportService
             using var context = _db.CreateContext();
             await context.Database.MigrateAsync();
 
+            // El código de puesto es de este equipo: se conserva aunque el respaldo venga de otro puesto.
+            var stationCode = await _db.GetStationCodeAsync();
+
             // La restauración reemplaza todos los datos; si algo falla, la transacción deja la base como estaba.
             await using var transaction = await context.Database.BeginTransactionAsync();
             await ClearAllTablesAsync(context);
@@ -232,10 +235,16 @@ public class ExportImportService
 
             if (package.SystemConfigs.Count > 0)
             {
-                context.SystemConfigs.AddRange(package.SystemConfigs);
+                context.SystemConfigs.AddRange(package.SystemConfigs.Where(c => c.Key != DatabaseService.StationCodeKey));
                 await context.SaveChangesAsync();
             }
             result.SystemConfigsImported = package.SystemConfigs.Count;
+
+            if (stationCode is not null)
+            {
+                context.SystemConfigs.Add(new SystemConfig { Key = DatabaseService.StationCodeKey, Value = stationCode });
+                await context.SaveChangesAsync();
+            }
 
             progress?.Report(70);
 
@@ -351,7 +360,8 @@ public class ExportImportService
         });
         progress?.Report(40);
 
-        package.SystemConfigs = await context.SystemConfigs.ToListAsync();
+        // El código de puesto es propio de cada equipo: no viaja en los respaldos.
+        package.SystemConfigs = await context.SystemConfigs.Where(c => c.Key != DatabaseService.StationCodeKey).ToListAsync();
         progress?.Report(45);
 
         package.BarrierConfigs = await context.BarrierConfigs.ToListAsync();

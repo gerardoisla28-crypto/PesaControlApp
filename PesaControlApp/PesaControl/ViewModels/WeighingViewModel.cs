@@ -374,7 +374,6 @@ public partial class WeighingViewModel : ObservableObject
 
         _currentRecord = new WeighingRecord
         {
-            TicketNumber = await _dataService.GetNextTicketAsync(),
             WeighInTime = DateTime.Now,
             LicensePlate = LicensePlate.Trim().ToUpper(),
             PlateCountry = PlateCountry,
