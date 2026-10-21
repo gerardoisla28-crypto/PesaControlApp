@@ -32,14 +32,64 @@
                 <StackPanel>
                     <TextBlock Text="Exportar" Style="{StaticResource SectionTitle}" />
                     <TextBlock Text="{Binding PendingText}" FontWeight="Bold" Margin="0,0,0,4" />
-                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"
-                               Text="Los pendientes son los pesajes nuevos o modificados desde la última exportación. El archivo incluye sus fotos." />
+                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"
+                               Text="Los pendientes son los pesajes nuevos o modificados desde la última exportación. Marque los que quiera llevar: los demás seguirán pendientes. El archivo incluye las fotos." />
+
+                    <!-- Filtros -->
+                    <WrapPanel Margin="0,0,0,8">
+                        <StackPanel Margin="0,0,8,0">
+                            <DatePicker SelectedDate="{Binding FilterFrom}" Width="130" ToolTip="Desde" />
+                            <TextBlock Text="Desde" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,8,0">
+                            <DatePicker SelectedDate="{Binding FilterTo}" Width="130" ToolTip="Hasta" />
+                            <TextBlock Text="Hasta" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,8,0">
+                            <ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding FilterKind}" Width="160" ToolTip="Tipo de pesaje" />
+                            <TextBlock Text="Tipo" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <Button Content="Limpiar filtros" Command="{Binding ClearFiltersCommand}"
+                                Style="{StaticResource WarningButton}" Padding="12,6" VerticalAlignment="Top" />
+                    </WrapPanel>
+
+                    <!-- Lista con casillas -->
+                    <ListView ItemsSource="{Binding PendingView}" Background="{StaticResource SurfaceDarkBrush}"
+                              BorderThickness="0" Height="290" Margin="0,0,0,8">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Width="44">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Ticket" Width="160" DisplayMemberBinding="{Binding TicketNumber}" />
+                                <GridViewColumn Header="Placa" Width="110" DisplayMemberBinding="{Binding LicensePlate}" />
+                                <GridViewColumn Header="Tipo" Width="130" DisplayMemberBinding="{Binding Kind}" />
+                                <GridViewColumn Header="Fecha" Width="150" DisplayMemberBinding="{Binding ActivityText}" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <WrapPanel Margin="0,0,0,10">
+                        <Button Content="Marcar a la vista" Command="{Binding SelectVisibleCommand}"
+                                Style="{StaticResource BusyAwarePrimary}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="Desmarcar a la vista" Command="{Binding ClearVisibleCommand}"
+                                Style="{StaticResource BusyAwarePrimary}" Padding="12,6" Margin="0,0,12,0" />
+                        <TextBlock Text="{Binding SelectionText}" VerticalAlignment="Center" FontWeight="Bold" />
+                    </WrapPanel>
+
                     <WrapPanel>
-                        <Button Content="Exportar pendientes" Command="{Binding ExportPendingCommand}"
+                        <Button Content="Exportar seleccionados" Command="{Binding ExportSelectedCommand}"
                                 Style="{StaticResource BusyAware}" Padding="20,10" Margin="0,0,8,0" />
                         <Button Content="Exportar todo" Command="{Binding ExportAllCommand}"
-                                Style="{StaticResource BusyAwarePrimary}" Padding="20,10" />
+                                Style="{StaticResource BusyAwarePrimary}" Padding="20,10"
+                                ToolTip="Todos los pesajes de este equipo, no solo los pendientes" />
                     </WrapPanel>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Margin="0,6,0,0" Foreground="{StaticResource TextMutedBrush}"
+                               Text="Exportar todo incluye todos los pesajes de este equipo, estén o no pendientes." />
                 </StackPanel>
             </Border>
 
