@@ -20,6 +20,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     private readonly WeighingViewModel? _weighingVm;
 
     [ObservableProperty] private BackupViewModel? _backupVM;
+    public ExchangeViewModel ExchangeVM { get; }
     [ObservableProperty] private int _selectedTabIndex;
 
     public SettingsViewModel(DatabaseService db, ScaleManager? scaleManager = null, WeighingViewModel? weighingVm = null, ExportImportService? exportImport = null)
@@ -27,6 +28,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         _db = db;
         _scaleManager = scaleManager;
         _weighingVm = weighingVm;
+        ExchangeVM = new ExchangeViewModel(new WeighingExchangeService(db), () => db.GetStationCodeAsync());
         if (exportImport != null)
         {
             BackupVM = new BackupViewModel(exportImport);
@@ -387,6 +389,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             StatusMessage = "Configuración cargada";
         });
 
+        await ExchangeVM.RefreshPendingCommand.ExecuteAsync(null);
         await LoadScalesAsync();
     }
 

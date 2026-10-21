@@ -1,0 +1,104 @@
+<UserControl x:Class="PesaControl.UI.Views.Controls.ExchangeControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Foreground="{StaticResource TextPrimaryBrush}">
+    <UserControl.Resources>
+        <Style x:Key="BusyAware" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                    <Setter Property="Opacity" Value="0.5" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="BusyAwarePrimary" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                    <Setter Property="Opacity" Value="0.5" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,8,15,0">
+
+            <TextBlock Text="Intercambio entre puestos" Style="{StaticResource SectionTitle}" FontSize="20" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"
+                       Text="Para puestos sin conexión al servidor: exporte los pesajes a un archivo, llévelo en un pendrive al otro equipo e impórtelo allí. Importar no borra nada y puede repetirse sin duplicar pesajes." />
+
+            <!-- Exportar -->
+            <Border Style="{StaticResource CardPanel}">
+                <StackPanel>
+                    <TextBlock Text="Exportar" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding PendingText}" FontWeight="Bold" Margin="0,0,0,4" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"
+                               Text="Los pendientes son los pesajes nuevos o modificados desde la última exportación. El archivo incluye sus fotos." />
+                    <WrapPanel>
+                        <Button Content="Exportar pendientes" Command="{Binding ExportPendingCommand}"
+                                Style="{StaticResource BusyAware}" Padding="20,10" Margin="0,0,8,0" />
+                        <Button Content="Exportar todo" Command="{Binding ExportAllCommand}"
+                                Style="{StaticResource BusyAwarePrimary}" Padding="20,10" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Importar -->
+            <Border Style="{StaticResource CardPanel}">
+                <StackPanel>
+                    <TextBlock Text="Importar" Style="{StaticResource SectionTitle}" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"
+                               Text="Une los pesajes del archivo con los de este equipo. Si un dato difiere en ambos, se conserva el de este equipo y se lista abajo para que lo revise." />
+                    <Button Content="Importar archivo" Command="{Binding ImportCommand}"
+                            Style="{StaticResource BusyAwarePrimary}" Padding="20,10" HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+
+            <!-- Progreso -->
+            <Border Style="{StaticResource CardPanel}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <ProgressBar Value="{Binding ProgressValue}" Height="16" BorderThickness="0" Margin="0,0,0,6"
+                                 Foreground="{StaticResource AccentGreenBrush}" Background="{StaticResource SurfaceLightBrush}" />
+                    <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Resultado -->
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,4,0,8">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource StatusMessage}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LastActionFailed}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <Border Style="{StaticResource CardPanel}" Visibility="{Binding HasImportSummary, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="{Binding ImportSummary}" TextWrapping="Wrap" />
+            </Border>
+
+            <!-- Conflictos -->
+            <Border Style="{StaticResource CardPanel}" Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="Conflictos" Style="{StaticResource SectionTitle}" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource AccentOrangeBrush}" Margin="0,0,0,8"
+                               Text="Estos datos son distintos en este equipo y en el archivo. Se conservó el valor de este equipo; si el del archivo era el correcto, corríjalo a mano en Registros." />
+                    <ListView ItemsSource="{Binding Conflicts}" Background="{StaticResource SurfaceDarkBrush}" BorderThickness="0" MaxHeight="260">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Ticket" Width="150" DisplayMemberBinding="{Binding TicketNumber}" />
+                                <GridViewColumn Header="Dato" Width="130" DisplayMemberBinding="{Binding Field}" />
+                                <GridViewColumn Header="Este equipo" Width="170" DisplayMemberBinding="{Binding LocalValue}" />
+                                <GridViewColumn Header="Archivo" Width="170" DisplayMemberBinding="{Binding IncomingValue}" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
