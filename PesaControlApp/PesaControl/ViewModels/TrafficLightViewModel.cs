@@ -9,7 +9,7 @@ using PesaControl.UI.Services;
 
 namespace PesaControl.UI.ViewModels;
 
-public partial class TrafficLightViewModel : ObservableObject
+public partial class TrafficLightViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _dbService;
     private ITrafficLightService? _trafficLightService;
@@ -37,6 +37,24 @@ public partial class TrafficLightViewModel : ObservableObject
         _externalService = service;
     }
 
+    // ── Cambios sin guardar ────────────────────────────────
+
+    private EditorTracker? _editorTracker;
+    private EditorTracker Editor => _editorTracker ??= new EditorTracker(() => System.Text.Json.JsonSerializer.Serialize(EditingTrafficLight));
+
+    partial void OnIsTrafficLightEditorOpenChanged(bool value) { if (!value) Editor.End(); }
+
+    public bool HasUnsavedChanges => IsTrafficLightEditorOpen && Editor.IsDirty;
+    public string UnsavedChangesDescription => "Semáforo";
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        await SaveTrafficLightAsync();
+        return !IsTrafficLightEditorOpen;
+    }
+
+    public void DiscardChanges() => CancelTrafficLightEditor();
+
     // ── Config editor ──────────────────────────────────
 
     [ObservableProperty] private bool _isTrafficLightEditorOpen;
@@ -56,6 +74,7 @@ public partial class TrafficLightViewModel : ObservableObject
             PortName = "COM3",
             BaudRate = 9600
         };
+        Editor.Begin();
         IsTrafficLightEditorOpen = true;
     }
 
@@ -80,6 +99,7 @@ public partial class TrafficLightViewModel : ObservableObject
             IpAddress = SelectedTrafficLight.IpAddress,
             TcpPort = SelectedTrafficLight.TcpPort
         };
+        Editor.Begin();
         IsTrafficLightEditorOpen = true;
     }
 

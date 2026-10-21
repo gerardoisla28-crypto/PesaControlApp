@@ -9,7 +9,7 @@ using PesaControl.UI.Services;
 
 namespace PesaControl.UI.ViewModels;
 
-public partial class BarrierViewModel : ObservableObject
+public partial class BarrierViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _dbService;
     private IBarrierService? _barrierService;
@@ -37,6 +37,24 @@ public partial class BarrierViewModel : ObservableObject
         _externalService = service;
     }
 
+    // ── Cambios sin guardar ────────────────────────────────
+
+    private EditorTracker? _editorTracker;
+    private EditorTracker Editor => _editorTracker ??= new EditorTracker(() => System.Text.Json.JsonSerializer.Serialize(EditingBarrier));
+
+    partial void OnIsBarrierEditorOpenChanged(bool value) { if (!value) Editor.End(); }
+
+    public bool HasUnsavedChanges => IsBarrierEditorOpen && Editor.IsDirty;
+    public string UnsavedChangesDescription => "Barrera";
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        await SaveBarrierAsync();
+        return !IsBarrierEditorOpen;
+    }
+
+    public void DiscardChanges() => CancelBarrierEditor();
+
     // ── Config editor ──────────────────────────────────────
 
     [ObservableProperty] private bool _isBarrierEditorOpen;
@@ -56,6 +74,7 @@ public partial class BarrierViewModel : ObservableObject
             PortName = "COM3",
             BaudRate = 9600
         };
+        Editor.Begin();
         IsBarrierEditorOpen = true;
     }
 
@@ -76,6 +95,7 @@ public partial class BarrierViewModel : ObservableObject
             IpAddress = SelectedBarrier.IpAddress,
             TcpPort = SelectedBarrier.TcpPort
         };
+        Editor.Begin();
         IsBarrierEditorOpen = true;
     }
 

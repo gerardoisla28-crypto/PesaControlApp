@@ -7,13 +7,62 @@ using PesaControl.Data.Repositories;
 
 namespace PesaControl.UI.ViewModels;
 
-public partial class CatalogsViewModel : ObservableObject
+public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _db;
 
     public CatalogsViewModel(DatabaseService db)
     {
         _db = db;
+        _productEditor = new EditorTracker(() => EditorTracker.Snap(EditProductName, EditProductIsActive));
+        _companyEditor = new EditorTracker(() => EditorTracker.Snap(EditCompanyName, EditCompanyRut, EditCompanyAddress, EditCompanyPhone, EditCompanyIsActive));
+        _operatorEditor = new EditorTracker(() => EditorTracker.Snap(EditOperatorName, EditOperatorPhone, EditOperatorCompany?.Id, EditOperatorIsActive));
+        _driverEditor = new EditorTracker(() => EditorTracker.Snap(EditDriverName, EditDriverPhone, EditDriverCompany?.Id, EditDriverIsActive));
+    }
+
+    // ========== CAMBIOS SIN GUARDAR ==========
+
+    private readonly EditorTracker _productEditor;
+    private readonly EditorTracker _companyEditor;
+    private readonly EditorTracker _operatorEditor;
+    private readonly EditorTracker _driverEditor;
+
+    partial void OnIsProductEditorOpenChanged(bool value) { if (!value) _productEditor.End(); }
+    partial void OnIsCompanyEditorOpenChanged(bool value) { if (!value) _companyEditor.End(); }
+    partial void OnIsOperatorEditorOpenChanged(bool value) { if (!value) _operatorEditor.End(); }
+    partial void OnIsDriverEditorOpenChanged(bool value) { if (!value) _driverEditor.End(); }
+
+    private bool ProductDirty => IsProductEditorOpen && _productEditor.IsDirty;
+    private bool CompanyDirty => IsCompanyEditorOpen && _companyEditor.IsDirty;
+    private bool OperatorDirty => IsOperatorEditorOpen && _operatorEditor.IsDirty;
+    private bool DriverDirty => IsDriverEditorOpen && _driverEditor.IsDirty;
+
+    public bool HasUnsavedChanges => ProductDirty || CompanyDirty || OperatorDirty || DriverDirty;
+
+    public string UnsavedChangesDescription => string.Join(", ", new[]
+    {
+        ProductDirty ? "Producto" : null,
+        CompanyDirty ? "Empresa" : null,
+        OperatorDirty ? "Operador" : null,
+        DriverDirty ? "Conductor" : null
+    }.Where(x => x is not null));
+
+    // Si el guardado no cierra el editor (por ejemplo, falta un dato), no se debe salir de la pantalla.
+    public async Task<bool> SaveChangesAsync()
+    {
+        if (ProductDirty) { await SaveProductAsync(); if (IsProductEditorOpen) return false; }
+        if (CompanyDirty) { await SaveCompanyAsync(); if (IsCompanyEditorOpen) return false; }
+        if (OperatorDirty) { await SaveOperatorAsync(); if (IsOperatorEditorOpen) return false; }
+        if (DriverDirty) { await SaveDriverAsync(); if (IsDriverEditorOpen) return false; }
+        return true;
+    }
+
+    public void DiscardChanges()
+    {
+        CancelProductEdit();
+        CancelCompanyEdit();
+        CancelOperatorEdit();
+        CancelDriverEdit();
     }
 
     // ========== PRODUCTS ==========
@@ -43,6 +92,7 @@ public partial class CatalogsViewModel : ObservableObject
         SelectedProduct = null;
         EditProductName = "";
         EditProductIsActive = true;
+        _productEditor.Begin();
         IsProductEditorOpen = true;
     }
 
@@ -52,6 +102,7 @@ public partial class CatalogsViewModel : ObservableObject
         if (SelectedProduct is null) return;
         EditProductName = SelectedProduct.Name;
         EditProductIsActive = SelectedProduct.IsActive;
+        _productEditor.Begin();
         IsProductEditorOpen = true;
     }
 
@@ -134,6 +185,7 @@ public partial class CatalogsViewModel : ObservableObject
         EditCompanyAddress = "";
         EditCompanyPhone = "";
         EditCompanyIsActive = true;
+        _companyEditor.Begin();
         IsCompanyEditorOpen = true;
     }
 
@@ -146,6 +198,7 @@ public partial class CatalogsViewModel : ObservableObject
         EditCompanyAddress = SelectedCompany.Address;
         EditCompanyPhone = SelectedCompany.Phone;
         EditCompanyIsActive = SelectedCompany.IsActive;
+        _companyEditor.Begin();
         IsCompanyEditorOpen = true;
     }
 
@@ -242,6 +295,7 @@ public partial class CatalogsViewModel : ObservableObject
         EditOperatorPhone = "";
         EditOperatorCompany = Companies.FirstOrDefault();
         EditOperatorIsActive = true;
+        _operatorEditor.Begin();
         IsOperatorEditorOpen = true;
     }
 
@@ -253,6 +307,7 @@ public partial class CatalogsViewModel : ObservableObject
         EditOperatorPhone = SelectedOperator.Phone ?? "";
         EditOperatorCompany = Companies.FirstOrDefault(c => c.Id == SelectedOperator.CompanyId);
         EditOperatorIsActive = SelectedOperator.IsActive;
+        _operatorEditor.Begin();
         IsOperatorEditorOpen = true;
     }
 
@@ -347,6 +402,7 @@ public partial class CatalogsViewModel : ObservableObject
         EditDriverPhone = "";
         EditDriverCompany = Companies.FirstOrDefault();
         EditDriverIsActive = true;
+        _driverEditor.Begin();
         IsDriverEditorOpen = true;
     }
 
@@ -358,6 +414,7 @@ public partial class CatalogsViewModel : ObservableObject
         EditDriverPhone = SelectedDriver.Phone ?? "";
         EditDriverCompany = Companies.FirstOrDefault(c => c.Id == SelectedDriver.CompanyId);
         EditDriverIsActive = SelectedDriver.IsActive;
+        _driverEditor.Begin();
         IsDriverEditorOpen = true;
     }
 
