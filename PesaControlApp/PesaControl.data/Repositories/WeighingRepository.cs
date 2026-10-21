@@ -67,18 +67,14 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
             .Include(w => w.Company)
             .FirstOrDefaultAsync(w => w.Id == id);
 
-    public async Task<PagedResult<WeighingRecord>> GetPagedAsync(
-        int page, int pageSize,
+    private IQueryable<WeighingRecord> ApplyFilters(
+        IQueryable<WeighingRecord> query,
         string? plate, string? ticket,
         DateTime? from, DateTime? to,
         WeighingStatus? status,
-        int? productId, int? companyId)
+        int? productId, int? companyId,
+        ExportFilter exportFilter)
     {
-        var query = _dbSet
-            .Include(w => w.Product)
-            .Include(w => w.Company)
-            .AsQueryable();
-
         if (!string.IsNullOrWhiteSpace(plate))
             query = query.Where(w => w.LicensePlate.Contains(plate.Trim().ToUpper()));
 
@@ -100,6 +96,27 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
         if (companyId.HasValue)
             query = query.Where(w => w.CompanyId == companyId.Value);
 
+        return exportFilter switch
+        {
+            ExportFilter.Pending => query.Where(w => w.ExportPending),
+            ExportFilter.Exported => query.Where(w => !w.ExportPending),
+            _ => query
+        };
+    }
+
+    // Sin seguimiento: el contexto del ViewModel vive mucho tiempo y mostraría el estado de exportación viejo.
+    public async Task<PagedResult<WeighingRecord>> GetPagedAsync(
+        int page, int pageSize,
+        string? plate, string? ticket,
+        DateTime? from, DateTime? to,
+        WeighingStatus? status,
+        int? productId, int? companyId,
+        ExportFilter exportFilter = ExportFilter.All)
+    {
+        var query = ApplyFilters(
+            _dbSet.AsNoTracking().Include(w => w.Product).Include(w => w.Company),
+            plate, ticket, from, to, status, productId, companyId, exportFilter);
+
         var totalCount = await query.CountAsync();
 
         var items = await query
@@ -116,4 +133,16 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
             PageSize = pageSize
         };
     }
+
+    // Los Id de todo el filtro, en todas las páginas: para "seleccionar todos".
+    public async Task<List<int>> GetFilteredIdsAsync(
+        string? plate, string? ticket,
+        DateTime? from, DateTime? to,
+        WeighingStatus? status,
+        int? productId, int? companyId,
+        ExportFilter exportFilter = ExportFilter.All)
+        => await ApplyFilters(_dbSet.AsNoTracking(), plate, ticket, from, to, status, productId, companyId, exportFilter)
+            .OrderByDescending(w => w.WeighInTime)
+            .Select(w => w.Id)
+            .ToListAsync();
 }

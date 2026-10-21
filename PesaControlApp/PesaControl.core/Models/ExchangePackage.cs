@@ -135,3 +135,5 @@ public class ExchangeCandidate
          : WeighOutTime is not null ? "Salida"
          : "Entrada";
 }
+
+public enum ExportFilter { All, Pending, Exported }

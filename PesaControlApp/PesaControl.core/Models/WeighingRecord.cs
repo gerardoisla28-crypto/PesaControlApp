@@ -8,7 +8,7 @@ public enum WeighingStatus
     Cancelled
 }
 
-public class WeighingRecord
+public class WeighingRecord : System.ComponentModel.INotifyPropertyChanged
 {
     public int Id { get; set; }
     public string TicketNumber { get; set; } = "";
@@ -34,6 +34,24 @@ public class WeighingRecord
 
     // Pendiente de incluir en un archivo de intercambio: se activa al crear o modificar el pesaje y se desactiva al exportarlo.
     public bool ExportPending { get; set; } = true;
+
+    // Estado de la pantalla de Registros (casilla de exportación): no se guarda ni viaja en los respaldos.
+    private bool _isSelectedForExport;
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsSelectedForExport
+    {
+        get => _isSelectedForExport;
+        set
+        {
+            if (_isSelectedForExport == value) return;
+            _isSelectedForExport = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsSelectedForExport)));
+        }
+    }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 
     public Product? Product { get; set; }
     public Company? Company { get; set; }
