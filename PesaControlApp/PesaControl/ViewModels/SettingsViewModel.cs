@@ -40,11 +40,13 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     // ── Puesto ────────────────────────────────────────────
 
     [ObservableProperty] private string _stationCode = "";
+    public string StationCodeCounter => $"{StationCode.Length}/{StationCodePolicy.MaxLength}";
     [ObservableProperty] private string _stationCodeError = "";
     [ObservableProperty] private string _stationCodeMessage = "";
 
     partial void OnStationCodeChanged(string value)
     {
+        OnPropertyChanged(nameof(StationCodeCounter));
         StationCodeError = "";
         StationCodeMessage = "";
     }

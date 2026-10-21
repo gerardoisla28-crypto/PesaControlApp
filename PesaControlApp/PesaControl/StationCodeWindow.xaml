@@ -26,7 +26,15 @@
                  Style="{StaticResource MaterialDesignOutlinedTextBox}"
                  materialDesign:HintAssist.Hint="Ej: STGO o RM"
                  materialDesign:HintAssist.IsFloating="False" />
-        <TextBlock x:Name="CodeError" Style="{StaticResource FieldError}" />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="CodeError" Style="{StaticResource FieldError}" />
+            <TextBlock x:Name="CodeCounter" Grid.Column="1" FontSize="12" Margin="8,3,2,6"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+        </Grid>
 
         <TextBlock Text="Si la empresa tiene varios puestos, cada uno debe tener un código distinto."
                    TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"

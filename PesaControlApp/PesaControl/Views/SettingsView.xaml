@@ -219,8 +219,12 @@
                                            Text="Identifica este puesto en los números de ticket (por ejemplo STGO-2026-10-0001). Ejemplos: Santiago = STGO, Región Metropolitana = RM." />
 
                                 <Label Content="Código (1 a 4 caracteres, letras y números) *" Style="{StaticResource FormLabel}" />
-                                <TextBox Text="{Binding StationCode, UpdateSourceTrigger=PropertyChanged}"
-                                         MaxLength="4" CharacterCasing="Upper" Width="160" HorizontalAlignment="Left" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox Text="{Binding StationCode, UpdateSourceTrigger=PropertyChanged}"
+                                             MaxLength="4" CharacterCasing="Upper" Width="160" />
+                                    <TextBlock Text="{Binding StationCodeCounter}" FontSize="12" VerticalAlignment="Center"
+                                               Margin="10,0,0,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                                </StackPanel>
                                 <TextBlock Text="{Binding StationCodeError}" Foreground="{StaticResource AccentRedBrush}"
                                            FontSize="12" TextWrapping="Wrap" MinHeight="16" Margin="2,3,0,6" />
 
