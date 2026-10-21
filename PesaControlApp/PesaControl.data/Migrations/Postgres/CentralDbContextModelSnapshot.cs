@@ -617,6 +617,9 @@ namespace PesaControl.Data.Migrations.Postgres
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("ExportPending")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal>("GrossWeight")
                         .HasColumnType("decimal(18,3)");
 

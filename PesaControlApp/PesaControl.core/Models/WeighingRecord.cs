@@ -32,6 +32,9 @@ public class WeighingRecord
     public bool IsExitWeightManual { get; set; }
     public string Notes { get; set; } = "";
 
+    // Pendiente de incluir en un archivo de intercambio: se activa al crear o modificar el pesaje y se desactiva al exportarlo.
+    public bool ExportPending { get; set; } = true;
+
     public Product? Product { get; set; }
     public Company? Company { get; set; }
 }

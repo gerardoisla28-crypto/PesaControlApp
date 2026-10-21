@@ -132,6 +132,7 @@ public class ExportImportService
             progress?.Report(20);
 
             using var context = _db.CreateContext();
+            context.KeepExportPendingAsIs = true; // la restauración conserva el estado de cada pesaje
             await context.Database.MigrateAsync();
 
             // El código de puesto es de este equipo: se conserva aunque el respaldo venga de otro puesto.

@@ -22,8 +22,30 @@ public abstract class AppDbContext : DbContext
     public DbSet<DvrConfig> DvrConfigs => Set<DvrConfig>();
     public DbSet<TicketCounter> TicketCounters => Set<TicketCounter>();
 
+    // Los importadores fijan ExportPending ellos mismos: con esto el contexto no lo marca como pendiente.
+    public bool KeepExportPendingAsIs { get; set; }
+
     protected AppDbContext(DbContextOptions options) : base(options)
     {
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        MarkWeighingsPending();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        MarkWeighingsPending();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void MarkWeighingsPending()
+    {
+        if (KeepExportPendingAsIs) return;
+        foreach (var entry in ChangeTracker.Entries<WeighingRecord>().Where(e => e.State is EntityState.Added or EntityState.Modified))
+            entry.Entity.ExportPending = true;
     }
 
     // Las fechas se guardan como hora local: los valores en UTC se convierten al escribir.
