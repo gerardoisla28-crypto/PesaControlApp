@@ -33,31 +33,60 @@ public partial class DashboardViewModel : ObservableObject
         CurrentUser = currentUser;
     }
 
-    [RelayCommand]
-    private void ShowWeighing()
+    // Si la pantalla actual tiene cambios sin guardar, pregunta antes de salir de ella.
+    private async Task<bool> CanLeaveCurrentAsync()
     {
+        if (CurrentViewModel is not IUnsavedChanges { HasUnsavedChanges: true } pending)
+            return true;
+
+        var answer = System.Windows.MessageBox.Show(
+            $"Hay cambios sin guardar en: {pending.UnsavedChangesDescription}.\n\n" +
+            "Sí: guardar y continuar\nNo: salir sin guardar\nCancelar: seguir editando",
+            "Cambios sin guardar",
+            System.Windows.MessageBoxButton.YesNoCancel,
+            System.Windows.MessageBoxImage.Warning);
+
+        switch (answer)
+        {
+            case System.Windows.MessageBoxResult.Yes:
+                return await pending.SaveChangesAsync();
+            case System.Windows.MessageBoxResult.No:
+                pending.DiscardChanges();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShowWeighingAsync()
+    {
+        if (!await CanLeaveCurrentAsync()) return;
         CurrentViewModel = WeighingVM;
         WeighingVM?.RefreshCatalogsCommand.Execute(null);
         CurrentSection = "Pesaje";
     }
 
     [RelayCommand]
-    private void ShowCameras()
+    private async Task ShowCamerasAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         CurrentViewModel = CameraVM;
         CurrentSection = "Camaras";
     }
 
     [RelayCommand]
-    private void ShowRegistros()
+    private async Task ShowRegistrosAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         CurrentViewModel = RegistrosVM;
         CurrentSection = "Registros";
     }
 
     [RelayCommand]
-    private void ShowControls()
+    private async Task ShowControlsAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         if (IsControlModuleEnabled)
         {
             CurrentViewModel = ControlsVM;
@@ -66,8 +95,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowUsers()
+    private async Task ShowUsersAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         if (!IsAdmin) return;
         CurrentViewModel = UsersVM;
         UsersVM?.LoadUsersCommand.Execute(null);
@@ -75,8 +105,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowSettings()
+    private async Task ShowSettingsAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         if (!IsAdmin) return;
         CurrentViewModel = SettingsVM;
         SettingsVM?.LoadConfigCommand.Execute(null);
@@ -84,8 +115,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowCatalogs()
+    private async Task ShowCatalogsAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         if (!IsAdmin) return;
         CurrentViewModel = CatalogsVM;
         CatalogsVM?.LoadProductsCommand.Execute(null);
@@ -96,8 +128,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowReports()
+    private async Task ShowReportsAsync()
     {
+        if (!await CanLeaveCurrentAsync()) return;
         CurrentViewModel = ReportesVM;
         CurrentSection = "Reportes";
     }

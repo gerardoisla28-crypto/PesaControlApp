@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO.Ports;
+using System.Text.Json;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,7 +13,7 @@ using PesaControl.Data.Services;
 
 namespace PesaControl.UI.ViewModels;
 
-public partial class SettingsViewModel : ObservableObject
+public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 {
     private readonly DatabaseService _db;
     private readonly ScaleManager? _scaleManager;
@@ -49,25 +50,89 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task SaveStationCodeAsync()
+    private async Task SaveStationCodeAsync() => await TrySaveStationCodeAsync();
+
+    private async Task<bool> TrySaveStationCodeAsync()
     {
         var code = StationCodePolicy.Normalize(StationCode);
         if (!StationCodePolicy.IsValid(code))
         {
             StationCodeError = StationCodePolicy.Describe();
-            return;
+            SelectedTabIndex = StationTabIndex;
+            return false;
         }
 
         try
         {
             await _db.SetStationCodeAsync(code);
+            _savedStationCode = code;
             StationCode = code;
             StationCodeMessage = $"Código guardado. Los próximos tickets usarán la serie {code}-…";
+            return true;
         }
         catch (Exception ex)
         {
             StationCodeError = $"No se pudo guardar: {ex.Message}";
+            SelectedTabIndex = StationTabIndex;
+            return false;
         }
+    }
+
+    // ── Cambios sin guardar ───────────────────────────────
+
+    private const int StationTabIndex = 1;
+
+    private string _savedStationCode = "";
+    private string _savedModeName = "Local";
+    private string _savedServerPort = "5000";
+    private string _savedServerUrl = "http://192.168.1.100:5000";
+    private string _scaleSnapshot = "";
+
+    private static string SnapshotScale(ScaleConfig? scale) => scale is null ? "" : JsonSerializer.Serialize(scale);
+    private string SnapshotScale() => SnapshotScale(EditingScale);
+
+    private bool StationCodeDirty => StationCodePolicy.Normalize(StationCode) != _savedStationCode;
+    private bool NetworkDirty => SelectedModeName != _savedModeName || ServerPort != _savedServerPort || ServerUrl != _savedServerUrl;
+    private bool ScaleDirty => IsScaleEditorOpen && SnapshotScale() != _scaleSnapshot;
+
+    public bool HasUnsavedChanges => StationCodeDirty || NetworkDirty || ScaleDirty;
+
+    public string UnsavedChangesDescription
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (ScaleDirty) parts.Add("Básculas");
+            if (StationCodeDirty) parts.Add("Puesto");
+            if (NetworkDirty) parts.Add("Red");
+            return string.Join(", ", parts);
+        }
+    }
+
+    public async Task<bool> SaveChangesAsync()
+    {
+        if (StationCodeDirty && !await TrySaveStationCodeAsync()) return false;
+        if (NetworkDirty)
+        {
+            await SaveConfigAsync();
+            if (NetworkDirty) return false;
+        }
+        if (ScaleDirty)
+        {
+            await SaveScaleAsync();
+            if (IsScaleEditorOpen) return false;
+        }
+        return true;
+    }
+
+    public void DiscardChanges()
+    {
+        StationCode = _savedStationCode;
+        StationCodeError = "";
+        SelectedModeName = _savedModeName;
+        ServerPort = _savedServerPort;
+        ServerUrl = _savedServerUrl;
+        if (IsScaleEditorOpen) CancelScaleEditor();
     }
 
     // ── Básculas ──────────────────────────────────────────
@@ -107,6 +172,7 @@ public partial class SettingsViewModel : ObservableObject
             SortOrder = ScaleConfigs.Count
         };
         SelectedProtocolName = "Serial";
+        _scaleSnapshot = SnapshotScale();
         IsScaleEditorOpen = true;
     }
 
@@ -140,6 +206,7 @@ public partial class SettingsViewModel : ObservableObject
             ProtocolType.SensocarA12 => "Sensocar A12",
             _ => "Serial"
         };
+        _scaleSnapshot = SnapshotScale();
         IsScaleEditorOpen = true;
     }
 
@@ -247,6 +314,10 @@ public partial class SettingsViewModel : ObservableObject
             ServerUrl = dict.GetValueOrDefault("server_url", "http://192.168.1.100:5000");
 
             StationCode = stationCode;
+            _savedStationCode = stationCode;
+            _savedModeName = SelectedModeName;
+            _savedServerPort = ServerPort;
+            _savedServerUrl = ServerUrl;
             StationCodeError = "";
             StationCodeMessage = "";
 
@@ -274,6 +345,9 @@ public partial class SettingsViewModel : ObservableObject
             await UpsertAsync(repo, "server_port", ServerPort);
             await UpsertAsync(repo, "server_url", ServerUrl);
 
+            _savedModeName = SelectedModeName;
+            _savedServerPort = ServerPort;
+            _savedServerUrl = ServerUrl;
             StatusMessage = "Configuración guardada correctamente";
         }
         catch (Exception ex)
