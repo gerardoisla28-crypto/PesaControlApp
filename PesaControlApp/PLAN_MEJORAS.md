@@ -188,6 +188,13 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] Dejar `SerialTest` fuera del instalador y documentado.
 - [ ] CI mínimo con `dotnet build` y `dotnet test`.
 - [ ] README y manual de instalación y soporte.
+- [ ] **Verificación manual pendiente del aviso de cambios sin guardar** en Usuarios, Catálogos y Control (editor de dispositivos). Está implementado (`IUnsavedChanges` y `EditorTracker`) y probado con la lógica de Configuración, pero no con estas pantallas en la app real. Comprobar:
+  - Abrir un formulario de usuario, escribir algo y pulsar otra sección del menú: debe preguntar.
+  - Abrir un formulario de catálogo (producto, empresa, operador o conductor), escribir algo y cerrar la ventana: debe preguntar.
+  - Abrir y cancelar un formulario **sin cambios**: no debe preguntar.
+  - Control: lo mismo con el editor de dispositivos, barrera y semáforo.
+  - "Guardar y continuar" con un formulario inválido (falta un dato obligatorio): debe quedarse en la pantalla.
+  - Al cerrar la app con el aviso, comprobar en el Administrador de tareas que el proceso termina; si queda abierto, revisar el cierre de hilos de cámara y puerto serie.
 
 ## Orden de trabajo sugerido
 
