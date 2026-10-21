@@ -32,6 +32,7 @@ public partial class InitialAdminWindow : Window
 
         UsernameError.Text = UsernamePolicy.IsValid(username) ? "" : UsernamePolicy.Describe();
         FullNameError.Text = !FullNamePolicy.HasNameAndSurname(fullName) ? "Ingrese nombre y apellido."
+            : !FullNamePolicy.HasOnlyValidChars(fullName) ? FullNamePolicy.DescribeInvalidChars()
             : FullNamePolicy.IsTooLong(fullName) ? FullNamePolicy.DescribeTooLong() : "";
         PasswordError.Text = PasswordPolicy.IsValid(UserRoles.Admin, PasswordBox.Password)
             ? "" : PasswordPolicy.Describe(UserRoles.Admin);

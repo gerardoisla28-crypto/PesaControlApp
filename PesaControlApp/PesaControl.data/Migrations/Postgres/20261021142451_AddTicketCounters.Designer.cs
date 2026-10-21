@@ -9,11 +9,11 @@ using PesaControl.Data.Data;
 
 #nullable disable
 
-namespace PesaControl.Data.Migrations
+namespace PesaControl.Data.Migrations.Postgres
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20261020173114_InitialCreate")]
-    partial class InitialCreate
+    [DbContext(typeof(CentralDbContext))]
+    [Migration("20261021142451_AddTicketCounters")]
+    partial class AddTicketCounters
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -434,6 +434,20 @@ namespace PesaControl.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("SystemConfigs", (string)null);
+                });
+
+            modelBuilder.Entity("PesaControl.Core.Models.TicketCounter", b =>
+                {
+                    b.Property<string>("Prefix")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("LastNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Prefix");
+
+                    b.ToTable("TicketCounters", (string)null);
                 });
 
             modelBuilder.Entity("PesaControl.Core.Models.TicketTemplate", b =>

@@ -1,15 +1,15 @@
 using PesaControl.Data.Data;
 
 Console.WriteLine("PesaControl - Provisionamiento de SuperAdmin");
-Console.Write("Cadena de conexión PostgreSQL (Enter para usar PESACONTROL_DB o dbsettings.json): ");
-var connectionString = Console.ReadLine();
+Console.Write("Ruta de la base de datos local (Enter para la predeterminada): ");
+var databasePath = Console.ReadLine();
 Console.Write("Usuario de superadmin: ");
 var username = Console.ReadLine()?.Trim() ?? "";
 Console.Write("Contraseña de superadmin: ");
 var password = ReadPassword();
 Console.WriteLine();
 
-var database = string.IsNullOrWhiteSpace(connectionString) ? new DatabaseService() : new DatabaseService(connectionString);
+var database = string.IsNullOrWhiteSpace(databasePath) ? new DatabaseService() : new DatabaseService(databasePath);
 try
 {
     await database.InitializeAsync();

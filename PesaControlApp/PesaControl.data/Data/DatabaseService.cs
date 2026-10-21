@@ -6,28 +6,32 @@ namespace PesaControl.Data.Data;
 
 public class DatabaseService
 {
-    private readonly string _connectionString;
+    private readonly string _databasePath;
     private readonly IPasswordHasher _passwordHasher = new Argon2idPasswordHasher();
 
-    public DatabaseService() : this(DatabaseSettings.GetConnectionString())
+    public DatabaseService() : this(DatabaseSettings.GetDatabasePath())
     {
     }
 
-    public DatabaseService(string connectionString)
+    public DatabaseService(string databasePath)
     {
-        _connectionString = connectionString;
+        _databasePath = databasePath;
     }
 
     public async Task InitializeAsync()
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_databasePath))!);
+
         using var context = CreateContext();
         await context.Database.MigrateAsync();
+        // WAL permite leer mientras otro hilo escribe (báscula, cámaras y pantallas usan la base a la vez).
+        await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
 
         await MigrateLegacyScaleConfigAsync(context);
         await SeedAsync(context);
     }
 
-    public AppDbContext CreateContext() => new(_connectionString);
+    public AppDbContext CreateContext() => new LocalDbContext(_databasePath);
 
     public async Task<bool> HasAdminAsync()
     {

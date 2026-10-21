@@ -80,20 +80,35 @@ public class LocalWeighingDataService : IWeighingDataService
             .ToListAsync();
     }
 
+    // Un solo INSERT ... ON CONFLICT incrementa el contador del mes de forma atómica, así que dos puestos
+    // que piden un número a la vez nunca reciben el mismo. Si el contador del mes aún no existe (por
+    // ejemplo, tras restaurar un respaldo), parte del mayor número ya usado.
     public async Task<string> GetNextTicketAsync()
     {
         using var ctx = _db.CreateContext();
         var prefix = $"{DateTime.Now.Year}-{DateTime.Now.Month:D2}-";
-        var last = await ctx.WeighingRecords
-            .Where(w => w.TicketNumber.StartsWith(prefix))
-            .OrderByDescending(w => w.TicketNumber)
-            .FirstOrDefaultAsync();
 
-        int nextNumber = 1;
-        if (last != null && int.TryParse(last.TicketNumber[prefix.Length..], out int lastNum))
-            nextNumber = lastNum + 1;
+        var connection = ctx.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync();
 
-        return $"{prefix}{nextNumber:D4}";
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO "TicketCounters" ("Prefix", "LastNumber")
+            VALUES (@prefix, COALESCE((
+                SELECT MAX(CAST(substr("TicketNumber", length(@prefix) + 1) AS integer))
+                FROM "WeighingRecords"
+                WHERE "TicketNumber" GLOB (@prefix || '[0-9]*')), 0) + 1)
+            ON CONFLICT ("Prefix") DO UPDATE SET "LastNumber" = "TicketCounters"."LastNumber" + 1
+            RETURNING "LastNumber"
+            """;
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "prefix";
+        parameter.Value = prefix;
+        command.Parameters.Add(parameter);
+
+        var next = Convert.ToInt32(await command.ExecuteScalarAsync());
+        return $"{prefix}{next:D4}";
     }
 
     public async Task<List<Product>> GetProductsAsync()

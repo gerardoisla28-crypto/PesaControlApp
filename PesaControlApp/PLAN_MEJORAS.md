@@ -43,10 +43,46 @@ Todo lo hecho está en la rama `feature/postgresql` (aún sin fusionar a `dev`).
 - **Fechas en hora local sin zona horaria**: todos los puestos de una instalación comparten zona horaria.
 - **Usuario sensible a mayúsculas y minúsculas** en el login, a propósito.
 - **Contraseñas**: se prioriza el largo sobre la complejidad; el mínimo es menor para Operator y Viewer, que las escriben con frecuencia en el puesto.
+- **Cada puesto debe poder pesar con y sin conexión** (diseño local-first, ver la sección "Operación con y sin conexión"). Almacén local: **SQLite embebido**; servidor central: **PostgreSQL**.
+- **Numeración de tickets por serie de puesto** (`A-2026-10-0001`, `B-2026-10-0001`): sin huecos dentro de cada puesto y sin depender de la red.
+- **Camión que entra por un puesto y sale por otro sin conexión: se permite el registro manual** de la salida, con los datos del ticket impreso.
+- **Sin límite de tiempo sin conexión**: un puesto puede trabajar indefinidamente sin servidor (incluso un cliente con un solo puesto sin red). Los registros se pueden **exportar a un archivo, llevarlos en un pendrive y cargarlos en otro equipo**.
 
 ## Decisiones pendientes
 
 - **¿Guardar las fotos en un servidor en la nube?** Por ahora se usa la carpeta compartida local. Revisar más adelante como opción adicional. A considerar: dependencia de internet en los puestos, costo mensual de almacenamiento, seguridad del servicio expuesto y responsabilidad sobre los datos de todos los clientes.
+
+## Operación con y sin conexión (local-first) — nuevo, es el cambio de arquitectura más grande
+
+Cada puesto guarda y numera en un **almacén local** y sincroniza con el servidor cuando hay conexión. Sin servidor, el puesto sigue funcionando de forma autónoma y los datos viajan en archivos.
+
+### Decisión tomada: almacén local SQLite y servidor central PostgreSQL (2026-10-21)
+- Cada puesto usa **SQLite embebido** como almacén local (sin instalación ni administración) y funciona solo, sin servidor.
+- **PostgreSQL es el servidor central**, usado cuando hay conexión para consolidar y compartir datos entre puestos.
+- Implica mantener **dos proveedores de EF Core** (SQLite local y Npgsql central) y dos juegos de migraciones (`Migrations/Sqlite` y `Migrations/Postgres`), con las entidades compartidas.
+- La migración a PostgreSQL ya hecha sigue siendo válida como lado servidor y como esquema. Lo que se rehace es qué base usa directamente cada puesto (hoy habla con PostgreSQL).
+- Configuración y datos del puesto (código de puesto, báscula, cámaras, impresora, contador de tickets) viven **solo en el almacén local**, no en la base compartida.
+
+### Diseño
+- **Numeración:** cada puesto tiene un **código** (en su configuración) y una serie propia. El contador vive en el almacén local y se incrementa **en la misma transacción** que guarda el pesaje, por lo que no deja huecos. Anular un ticket (`Cancelled`) conserva su número; los pesajes nunca se borran.
+- **Clave natural global:** el número con el código de puesto es único en todo el sistema, así que importar o sincronizar dos veces el mismo pesaje es **idempotente** (se omite o se fusiona, no se duplica).
+- **Propiedad por campos:** los datos de entrada pertenecen al puesto que creó el ticket y los de salida al puesto que registró la salida. Al fusionar dos mitades del mismo ticket se toma cada grupo de campos de su dueño.
+- **Salida en otro puesto sin conexión:** pantalla de **registro manual de salida** donde se escribe el número del ticket impreso, la placa y el peso de entrada. Al sincronizar, el servidor une las dos mitades por el número del ticket.
+- **Login sin conexión:** copia local de los usuarios (con su hash Argon2id). Los cambios de usuarios y catálogos requieren conexión con el servidor.
+- **Fotos:** se guardan siempre en local y se suben al sincronizar (o viajan dentro del archivo de intercambio).
+- **Relojes:** guardar la hora del puesto y la de recepción en el servidor.
+
+### Tareas
+- [ ] Definir el código de puesto en la configuración por puesto.
+- [x] (parte 1) Almacén local SQLite en cada puesto, con `LocalDbContext` y `CentralDbContext` sobre un modelo compartido y migraciones por proveedor. *Hecho en la rama `feature/local-store`.*
+- [ ] Reemplazo del contador central interino por el contador local por serie de puesto.
+- [ ] Agregar a los pesajes: código de puesto, versión o fecha de modificación y estado de sincronización.
+- [ ] Servicio de sincronización en segundo plano (subir pendientes, bajar catálogos y tickets abiertos), con reintentos.
+- [ ] **Exportación incremental a archivo** (pesajes pendientes desde la última exportación, con sus fotos) e **importación que fusiona sin borrar** (no reutilizar tal cual la restauración actual, que vacía las tablas).
+- [ ] Registro manual de salida en otro puesto.
+- [ ] Copia local de usuarios para el login sin conexión.
+- [ ] Indicador visible del estado de conexión y de los registros pendientes de sincronizar.
+- [ ] Ampliar `ExportImportService` y su `ExportPackage` (hoy exporta todo y la importación reemplaza todo).
 
 ## Multi-puesto (nuevo, implica cambios en el código)
 
@@ -57,9 +93,9 @@ Estado actual: las fotos se guardan en `%LocalAppData%\PesaControl\Photos` con r
 - [ ] Si la red falla, guardar la foto en local y subirla después.
 - [ ] Quitar el `catch { }` vacío al guardar fotos: hoy un fallo pasa desapercibido.
 - [ ] Separar la **configuración por puesto** (báscula, puerto serie, cámaras, impresora) de la configuración compartida.
-- [ ] Numeración de tickets sin duplicados entre puestos.
+- [x] (interino) Numeración de tickets sin duplicados con un contador central; será reemplazada por la serie por puesto. *Hecho: contador atómico por mes (`TicketCounters`, `INSERT ... ON CONFLICT`); probado con 4 puestos simulados y 100 peticiones simultáneas. Si se pierde un número (p. ej. falla el guardado después de pedirlo) queda un hueco en la secuencia.*
 - [ ] Control de concurrencia: dos puestos editando o cerrando el mismo ticket.
-- [ ] Definir qué hace un puesto sin conexión al servidor (bloquear o permitir pesar sin conexión).
+- [x] Qué hace un puesto sin conexión: **definido**, puede pesar con y sin conexión (ver la sección local-first).
 - [ ] Registrar en la auditoría desde qué puesto se hizo cada acción.
 - [ ] Respaldos en el servidor, de la base y de las fotos por separado.
 - [ ] Política de retención de fotos.
@@ -155,7 +191,7 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 ## Orden de trabajo sugerido
 
 1. ~~Migración a PostgreSQL y migración inicial limpia (A1).~~ Hecho.
-2. **Siguiente:** multi-puesto: fotos con ruta relativa y carpeta compartida, configuración por puesto, numeración y concurrencia.
+2. **Siguiente:** operación con y sin conexión: (a) código de puesto y configuración por puesto, (b) almacén local con serie por puesto, (c) exportación e importación por archivo, (d) sincronización con el servidor, (e) registro manual de salida, (f) fotos compartidas y concurrencia.
 3. Registro de errores, auditoría (con el puesto de origen) y protección del último SuperAdmin.
 4. Primer arranque dentro de la app e instalador con los dos modos (servidor + puesto, solo puesto).
 5. Pruebas sobre la lógica de pesaje (con PostgreSQL de prueba o contenedor, no SQLite en memoria).

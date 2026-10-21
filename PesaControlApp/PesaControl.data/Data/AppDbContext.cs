@@ -3,7 +3,8 @@ using PesaControl.Core.Models;
 
 namespace PesaControl.Data.Data;
 
-public class AppDbContext : DbContext
+// Modelo compartido por el almacén local de cada puesto (SQLite) y el servidor central (PostgreSQL).
+public abstract class AppDbContext : DbContext
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<WeighingRecord> WeighingRecords => Set<WeighingRecord>();
@@ -19,26 +20,17 @@ public class AppDbContext : DbContext
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<ScaleConfig> ScaleConfigs => Set<ScaleConfig>();
     public DbSet<DvrConfig> DvrConfigs => Set<DvrConfig>();
+    public DbSet<TicketCounter> TicketCounters => Set<TicketCounter>();
 
-    private readonly string _connectionString;
-
-    public AppDbContext(string connectionString)
+    protected AppDbContext(DbContextOptions options) : base(options)
     {
-        _connectionString = connectionString;
     }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseNpgsql(_connectionString);
-
-    // Las fechas se guardan como hora local sin zona, igual que antes con SQLite.
+    // Las fechas se guardan como hora local: los valores en UTC se convierten al escribir.
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTime>()
-            .HaveColumnType("timestamp without time zone")
-            .HaveConversion<LocalDateTimeConverter>();
-        configurationBuilder.Properties<DateTime?>()
-            .HaveColumnType("timestamp without time zone")
-            .HaveConversion<LocalDateTimeConverter>();
+        configurationBuilder.Properties<DateTime>().HaveConversion<LocalDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<LocalDateTimeConverter>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -66,6 +58,13 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.TicketNumber).IsUnique();
             entity.HasIndex(e => e.WeighInTime);
             entity.HasIndex(e => e.LicensePlate);
+        });
+
+        modelBuilder.Entity<TicketCounter>(entity =>
+        {
+            entity.ToTable("TicketCounters");
+            entity.HasKey(e => e.Prefix);
+            entity.Property(e => e.Prefix).HasMaxLength(10);
         });
 
         modelBuilder.Entity<User>(entity =>
