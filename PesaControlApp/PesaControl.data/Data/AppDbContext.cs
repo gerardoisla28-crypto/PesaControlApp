@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<ScaleConfig> ScaleConfigs => Set<ScaleConfig>();
     public DbSet<DvrConfig> DvrConfigs => Set<DvrConfig>();
+    public DbSet<TicketCounter> TicketCounters => Set<TicketCounter>();
 
     private readonly string _connectionString;
 
@@ -66,6 +67,13 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.TicketNumber).IsUnique();
             entity.HasIndex(e => e.WeighInTime);
             entity.HasIndex(e => e.LicensePlate);
+        });
+
+        modelBuilder.Entity<TicketCounter>(entity =>
+        {
+            entity.ToTable("TicketCounters");
+            entity.HasKey(e => e.Prefix);
+            entity.Property(e => e.Prefix).HasMaxLength(10);
         });
 
         modelBuilder.Entity<User>(entity =>

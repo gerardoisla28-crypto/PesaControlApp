@@ -57,7 +57,7 @@ Estado actual: las fotos se guardan en `%LocalAppData%\PesaControl\Photos` con r
 - [ ] Si la red falla, guardar la foto en local y subirla después.
 - [ ] Quitar el `catch { }` vacío al guardar fotos: hoy un fallo pasa desapercibido.
 - [ ] Separar la **configuración por puesto** (báscula, puerto serie, cámaras, impresora) de la configuración compartida.
-- [ ] Numeración de tickets sin duplicados entre puestos.
+- [x] Numeración de tickets sin duplicados entre puestos. *Hecho: contador atómico por mes (`TicketCounters`, `INSERT ... ON CONFLICT`); probado con 4 puestos simulados y 100 peticiones simultáneas. Si se pierde un número (p. ej. falla el guardado después de pedirlo) queda un hueco en la secuencia.*
 - [ ] Control de concurrencia: dos puestos editando o cerrando el mismo ticket.
 - [ ] Definir qué hace un puesto sin conexión al servidor (bloquear o permitir pesar sin conexión).
 - [ ] Registrar en la auditoría desde qué puesto se hizo cada acción.

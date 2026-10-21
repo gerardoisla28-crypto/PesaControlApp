@@ -433,6 +433,20 @@ namespace PesaControl.Data.Migrations
                     b.ToTable("SystemConfigs", (string)null);
                 });
 
+            modelBuilder.Entity("PesaControl.Core.Models.TicketCounter", b =>
+                {
+                    b.Property<string>("Prefix")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("LastNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Prefix");
+
+                    b.ToTable("TicketCounters", (string)null);
+                });
+
             modelBuilder.Entity("PesaControl.Core.Models.TicketTemplate", b =>
                 {
                     b.Property<int>("Id")
