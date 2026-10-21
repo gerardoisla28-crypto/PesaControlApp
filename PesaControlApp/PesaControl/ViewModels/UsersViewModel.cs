@@ -112,6 +112,11 @@ public partial class UsersViewModel : ObservableObject
             return;
         }
         EditFullName = FullNamePolicy.Normalize(EditFullName);
+        if (!FullNamePolicy.HasOnlyValidChars(EditFullName))
+        {
+            StatusMessage = FullNamePolicy.DescribeInvalidChars();
+            return;
+        }
         if (FullNamePolicy.IsTooLong(EditFullName))
         {
             StatusMessage = FullNamePolicy.DescribeTooLong();
