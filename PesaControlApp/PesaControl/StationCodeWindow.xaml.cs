@@ -16,12 +16,7 @@ public partial class StationCodeWindow : Window
         IntroText.Text = "Identifica este puesto en los números de ticket. " +
                          $"Con el código STGO, el primer ticket del mes será STGO-{DateTime.Now:yyyy-MM}-0001.";
         ExamplesText.Text = $"Ejemplos: {StationCodePolicy.Example}.";
-        CodeBox.TextChanged += (_, _) =>
-        {
-            CodeError.Text = "";
-            CodeCounter.Text = $"{CodeBox.Text.Length}/{StationCodePolicy.MaxLength}";
-        };
-        CodeCounter.Text = $"0/{StationCodePolicy.MaxLength}";
+        CodeBox.TextChanged += (_, _) => CodeError.Text = "";
         Loaded += (_, _) => CodeBox.Focus();
     }
 
