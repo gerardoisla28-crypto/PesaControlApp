@@ -79,6 +79,9 @@ Cada puesto guarda y numera en un **almacén local** y sincroniza con el servido
 - [ ] Agregar a los pesajes: versión o fecha de modificación y estado de sincronización. *(Ya tienen el código de puesto, `StationCode`.)*
 - [ ] Servicio de sincronización en segundo plano (subir pendientes, bajar catálogos y tickets abiertos), con reintentos.
 - [ ] **Exportación incremental a archivo** (pesajes pendientes desde la última exportación, con sus fotos) e **importación que fusiona sin borrar** (no reutilizar tal cual la restauración actual, que vacía las tablas).
+  - *Tramo 1 hecho en la rama `feature/file-exchange`:* marca `ExportPending` en cada pesaje (se activa al crear o modificar y se desactiva al exportar), servicio `WeighingExchangeService` y archivo zip (`exchange.json` con los pesajes y los datos de su empresa y producto en lugar de los Id locales, `manifest.json` con la suma de verificación y `photos/`). Probado: exportación de pendientes y de todo, nueva exportación solo con lo modificado y restauración completa sin alterar el estado.
+  - *Decisiones:* los catálogos se emparejan por RUT (sin puntos ni guiones) y luego por nombre sin distinguir mayúsculas; sin cifrado por ahora; **sin fechas de modificación**: si el mismo ticket llega con datos distintos en el mismo grupo (entrada o salida), se conserva la versión local y se informa el conflicto en el resumen.
+  - *Pendiente:* tramo 2 (importación que fusiona sin borrar) y tramo 3 (pantalla en Configuración › Respaldo con exportar pendientes, exportar todo e importar).
 - [ ] Registro manual de salida en otro puesto.
 - [ ] Copia local de usuarios para el login sin conexión.
 - [ ] Indicador visible del estado de conexión y de los registros pendientes de sincronizar.
