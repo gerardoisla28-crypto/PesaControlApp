@@ -29,6 +29,7 @@ El archivo de solución es `.slnx` (formato XML de VS2022+, no el `.sln` clásic
 
 ## Módulos principales
 
+- **Tickets numerados por puesto**: `LocalWeighingDataService.CreateAsync` asigna `CÓDIGO-AAAA-MM-NNNN` en la misma transacción que guarda el pesaje; el código de puesto (`station_code`, 1 a 4 caracteres) se pide al primer arranque y no viaja en los respaldos.
 - **Pesaje**: `ScaleManager`, `WeighingService` y protocolos `IWeighingProtocol` (Sensocar A12, Sensoc, Modbus RTU/TCP, serial, autodetección).
 - **Acceso**: `IBarrierService` / `ITrafficLightService` con implementaciones Modbus y Arduino (`ArduinoAccessService` en UI).
 - **Tickets**: `ITicketPrinter` con `EscPosPrinter` y `WindowsPrinter`.
