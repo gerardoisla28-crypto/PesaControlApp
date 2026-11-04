@@ -1,11 +1,25 @@
 <UserControl x:Class="PesaControl.UI.Views.UsersView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900"
              Foreground="{StaticResource TextPrimaryBrush}">
+    <UserControl.Resources>
+        <Style x:Key="FieldError" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,-4,0,8" />
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="300" />
@@ -30,7 +44,7 @@
                     <TextBlock Text="Usuarios del Sistema" Style="{StaticResource SectionTitle}"
                                VerticalAlignment="Center" />
                     <WrapPanel Grid.Column="1">
-                        <Button Content="Configurar Usuarios" Command="{Binding ToggleEditorCommand}"
+                        <Button Content="Crear Usuario" Command="{Binding NewUserCommand}"
                                 Style="{StaticResource PrimaryButton}"
                                 Margin="0,0,6,0" />
                         <TextBlock Text="{Binding StatusMessage}"
@@ -76,6 +90,7 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Border CornerRadius="4" Width="36" Height="36"
                                             Background="{StaticResource AccentBlueBrush}"
@@ -99,6 +114,24 @@
                                                    FontSize="11"
                                                    Foreground="{StaticResource TextSecondaryBrush}" />
                                     </Border>
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal"
+                                                Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                                Background="{StaticResource AccentAmberBrush}"
+                                                Padding="8,6" Margin="0,0,6,0"
+                                                ToolTip="Editar"
+                                                Command="{Binding DataContext.EditUserCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding}">
+                                            <materialDesign:PackIcon Kind="Pencil" Width="18" Height="18" />
+                                        </Button>
+                                        <Button Style="{StaticResource DangerButton}"
+                                                Padding="8,6"
+                                                ToolTip="Eliminar"
+                                                Command="{Binding DataContext.DeleteUserCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding}">
+                                            <materialDesign:PackIcon Kind="Delete" Width="18" Height="18" />
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -134,9 +167,11 @@
 
                 <Label Content="Nombre de usuario" Style="{StaticResource FormLabel}" />
                 <TextBox Text="{Binding EditUsername}" Margin="0,0,0,8" />
+                <TextBlock Text="{Binding UsernameError}" Style="{StaticResource FieldError}" />
 
                 <Label Content="Nombre completo" Style="{StaticResource FormLabel}" />
                 <TextBox Text="{Binding EditFullName}" Margin="0,0,0,8" />
+                <TextBlock Text="{Binding FullNameError}" Style="{StaticResource FieldError}" />
 
                 <Label Content="Email" Style="{StaticResource FormLabel}" />
                 <TextBox Text="{Binding EditEmail}" Margin="0,0,0,8" />
@@ -145,16 +180,19 @@
                 <ComboBox ItemsSource="{Binding Roles}"
                           SelectedItem="{Binding EditRole}"
                           Margin="0,0,0,8" />
+                <TextBlock Text="{Binding RoleError}" Style="{StaticResource FieldError}" />
 
                 <Label Content="Contraseña" Style="{StaticResource FormLabel}" />
                 <PasswordBox x:Name="PasswordInput" Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
                              Style="{StaticResource MaterialDesignRevealPasswordBox}"
                              ToolTip="Entre 14 y 128 caracteres para SuperAdmin y Admin; entre 8 y 128 para Operator y Viewer. Dejar vacío para mantener la actual al editar." />
+                <TextBlock Text="{Binding PasswordError}" Style="{StaticResource FieldError}" />
 
                 <Label Content="Confirmar contraseña" Style="{StaticResource FormLabel}" />
                 <PasswordBox x:Name="ConfirmPasswordInput" Margin="0,0,0,8" PasswordChanged="ConfirmPasswordBox_OnPasswordChanged"
                              Style="{StaticResource MaterialDesignRevealPasswordBox}"
                              ToolTip="Repita la contraseña." />
+                <TextBlock Text="{Binding PasswordConfirmError}" Style="{StaticResource FieldError}" />
 
                 <CheckBox Content="Usuario activo"
                           IsChecked="{Binding EditIsActive}"
@@ -163,15 +201,11 @@
 
                 <WrapPanel>
                     <Button Content="Guardar" Command="{Binding SaveUserCommand}"
-                            Style="{StaticResource SuccessButton}"
+                            Style="{StaticResource PrimaryButton}"
                             Margin="0,0,6,0" Padding="20,10" />
                     <Button Content="Cancelar" Command="{Binding CancelEditCommand}"
-                            Style="{StaticResource WarningButton}"
-                            Margin="0,0,6,0" Padding="20,10" />
-                    <Button Content="Eliminar" Command="{Binding DeleteUserCommand}"
                             Style="{StaticResource DangerButton}"
-                            Padding="20,10"
-                            IsEnabled="{Binding IsEditing}" />
+                            Padding="20,10" />
                 </WrapPanel>
             </StackPanel>
         </Border>

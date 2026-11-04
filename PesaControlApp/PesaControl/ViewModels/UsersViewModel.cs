@@ -31,6 +31,22 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
 
     [ObservableProperty] private string _statusMessage = "";
 
+    // Per-field validation errors shown under each editor field
+    [ObservableProperty] private string _usernameError = "";
+    [ObservableProperty] private string _fullNameError = "";
+    [ObservableProperty] private string _roleError = "";
+    [ObservableProperty] private string _passwordError = "";
+    [ObservableProperty] private string _passwordConfirmError = "";
+
+    private void ClearFieldErrors()
+    {
+        UsernameError = "";
+        FullNameError = "";
+        RoleError = "";
+        PasswordError = "";
+        PasswordConfirmError = "";
+    }
+
     private readonly EditorTracker _editor;
 
     partial void OnIsEditorOpenChanged(bool value)
@@ -95,14 +111,16 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         EditPasswordConfirm = "";
         EditRole = "Operator";
         EditIsActive = true;
+        ClearFieldErrors();
         IsEditing = false;
         _editor.Begin();
         IsEditorOpen = true;
     }
 
     [RelayCommand]
-    private void EditUser()
+    private void EditUser(User? user)
     {
+        if (user is not null) SelectedUser = user;
         if (SelectedUser is null) return;
         if (!UserRoles.CanManageRole(_currentUser.Role, SelectedUser.Role))
         {
@@ -117,6 +135,7 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         EditPasswordConfirm = "";
         EditRole = SelectedUser.Role;
         EditIsActive = SelectedUser.IsActive;
+        ClearFieldErrors();
         IsEditing = true;
         _editor.Begin();
         IsEditorOpen = true;
@@ -125,39 +144,32 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     [RelayCommand]
     private async Task SaveUserAsync()
     {
+        ClearFieldErrors();
+        StatusMessage = "";
+
         EditUsername = EditUsername.Trim();
         var usernameChanged = !IsEditing || SelectedUser is null || EditUsername != SelectedUser.Username;
         if (usernameChanged && !UsernamePolicy.IsValid(EditUsername))
-        {
-            StatusMessage = UsernamePolicy.Describe();
-            return;
-        }
+            UsernameError = UsernamePolicy.Describe();
+
         EditFullName = FullNamePolicy.Normalize(EditFullName);
         if (!FullNamePolicy.HasOnlyValidChars(EditFullName))
-        {
-            StatusMessage = FullNamePolicy.DescribeInvalidChars();
-            return;
-        }
-        if (FullNamePolicy.IsTooLong(EditFullName))
-        {
-            StatusMessage = FullNamePolicy.DescribeTooLong();
-            return;
-        }
+            FullNameError = FullNamePolicy.DescribeInvalidChars();
+        else if (FullNamePolicy.IsTooLong(EditFullName))
+            FullNameError = FullNamePolicy.DescribeTooLong();
+
         if (!Roles.Contains(EditRole))
-        {
-            StatusMessage = "No tiene permisos para asignar ese rol";
+            RoleError = "No tiene permisos para asignar ese rol";
+
+        var checkPassword = !IsEditing || !string.IsNullOrWhiteSpace(EditPassword);
+        if (checkPassword && !PasswordPolicy.IsValid(EditRole, EditPassword))
+            PasswordError = PasswordPolicy.Describe(EditRole);
+        if (checkPassword && EditPassword != EditPasswordConfirm)
+            PasswordConfirmError = "Las contraseñas no coinciden";
+
+        if (UsernameError != "" || FullNameError != "" || RoleError != ""
+            || PasswordError != "" || PasswordConfirmError != "")
             return;
-        }
-        if ((!IsEditing || !string.IsNullOrWhiteSpace(EditPassword)) && !PasswordPolicy.IsValid(EditRole, EditPassword))
-        {
-            StatusMessage = PasswordPolicy.Describe(EditRole);
-            return;
-        }
-        if ((!IsEditing || !string.IsNullOrWhiteSpace(EditPassword)) && EditPassword != EditPasswordConfirm)
-        {
-            StatusMessage = "Las contraseñas no coinciden";
-            return;
-        }
 
         try
         {
@@ -188,7 +200,7 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
                 var existing = await repo.FindAsync(u => u.Username == EditUsername);
                 if (existing.Count > 0)
                 {
-                    StatusMessage = "Ya existe un usuario con ese nombre";
+                    UsernameError = "Ya existe un usuario con ese nombre";
                     return;
                 }
 
@@ -228,7 +240,7 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         else
         {
             if (SelectedUser is not null)
-                EditUser();
+                EditUser(null);
             else
                 NewUser();
         }
@@ -242,14 +254,22 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     }
 
     [RelayCommand]
-    private async Task DeleteUserAsync()
+    private async Task DeleteUserAsync(User? target)
     {
+        if (target is not null) SelectedUser = target;
         if (SelectedUser is null) return;
         if (!UserRoles.CanManageRole(_currentUser.Role, SelectedUser.Role))
         {
             StatusMessage = "No tiene permisos para eliminar este usuario";
             return;
         }
+
+        var confirm = System.Windows.MessageBox.Show(
+            $"¿Eliminar al usuario \"{SelectedUser.Username}\"?",
+            "Eliminar usuario",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
+        if (confirm != System.Windows.MessageBoxResult.Yes) return;
 
         try
         {
