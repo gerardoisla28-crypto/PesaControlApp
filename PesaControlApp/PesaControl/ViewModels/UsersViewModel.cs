@@ -23,7 +23,6 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     // Editor fields
     [ObservableProperty] private string _editUsername = "";
     [ObservableProperty] private string _editFullName = "";
-    [ObservableProperty] private string _editEmail = "";
     [ObservableProperty] private string _editPassword = "";
     [ObservableProperty] private string _editPasswordConfirm = "";
     [ObservableProperty] private string _editRole = "Operator";
@@ -46,6 +45,13 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         PasswordError = "";
         PasswordConfirmError = "";
     }
+
+    // A field's error disappears as soon as the user edits that field
+    partial void OnEditUsernameChanged(string value) => UsernameError = "";
+    partial void OnEditFullNameChanged(string value) => FullNameError = "";
+    partial void OnEditRoleChanged(string value) => RoleError = "";
+    partial void OnEditPasswordChanged(string value) => PasswordError = "";
+    partial void OnEditPasswordConfirmChanged(string value) => PasswordConfirmError = "";
 
     private readonly EditorTracker _editor;
 
@@ -71,7 +77,7 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     {
         _db = db;
         _currentUser = currentUser;
-        _editor = new EditorTracker(() => EditorTracker.Snap(EditUsername, EditFullName, EditEmail, EditRole, EditIsActive, EditPassword, EditPasswordConfirm));
+        _editor = new EditorTracker(() => EditorTracker.Snap(EditUsername, EditFullName, EditRole, EditIsActive, EditPassword, EditPasswordConfirm));
         Roles = currentUser.Role == UserRoles.SuperAdmin
             ? [UserRoles.SuperAdmin, UserRoles.Admin, UserRoles.Operator, UserRoles.Viewer]
             : [UserRoles.Operator, UserRoles.Viewer];
@@ -99,14 +105,29 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         }
     }
 
+    // Asks what to do with an open editor that has changes before another one replaces it
+    private async Task<bool> ConfirmReplaceEditorAsync()
+    {
+        if (!HasUnsavedChanges) return true;
+        switch (UnsavedChangesDialog.Ask(UnsavedChangesDescription))
+        {
+            case UnsavedChangesChoice.Save:
+                return await SaveChangesAsync();
+            case UnsavedChangesChoice.Discard:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     [RelayCommand]
-    private void NewUser()
+    private async Task NewUserAsync()
     {
         if (!UserRoles.CanManageUsers(_currentUser.Role)) return;
+        if (!await ConfirmReplaceEditorAsync()) return;
         SelectedUser = null;
         EditUsername = "";
         EditFullName = "";
-        EditEmail = "";
         EditPassword = "";
         EditPasswordConfirm = "";
         EditRole = "Operator";
@@ -118,19 +139,20 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     }
 
     [RelayCommand]
-    private void EditUser(User? user)
+    private async Task EditUserAsync(User? user)
     {
-        if (user is not null) SelectedUser = user;
-        if (SelectedUser is null) return;
-        if (!UserRoles.CanManageRole(_currentUser.Role, SelectedUser.Role))
+        var target = user ?? SelectedUser;
+        if (target is null) return;
+        if (!UserRoles.CanManageRole(_currentUser.Role, target.Role))
         {
             StatusMessage = "No tiene permisos para administrar este usuario";
             return;
         }
+        if (!await ConfirmReplaceEditorAsync()) return;
+        SelectedUser = target;
 
         EditUsername = SelectedUser.Username;
         EditFullName = SelectedUser.FullName;
-        EditEmail = SelectedUser.Email;
         EditPassword = "";
         EditPasswordConfirm = "";
         EditRole = SelectedUser.Role;
@@ -153,7 +175,9 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
             UsernameError = UsernamePolicy.Describe();
 
         EditFullName = FullNamePolicy.Normalize(EditFullName);
-        if (!FullNamePolicy.HasOnlyValidChars(EditFullName))
+        if (!FullNamePolicy.HasNameAndSurname(EditFullName))
+            FullNameError = "Ingrese nombre y apellido.";
+        else if (!FullNamePolicy.HasOnlyValidChars(EditFullName))
             FullNameError = FullNamePolicy.DescribeInvalidChars();
         else if (FullNamePolicy.IsTooLong(EditFullName))
             FullNameError = FullNamePolicy.DescribeTooLong();
@@ -183,9 +207,17 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
                     StatusMessage = "No tiene permisos para administrar este usuario";
                     return;
                 }
+                if (usernameChanged)
+                {
+                    var taken = await repo.FindAsync(u => u.Username == EditUsername && u.Id != SelectedUser.Id);
+                    if (taken.Count > 0)
+                    {
+                        UsernameError = "Ya existe un usuario con este nombre de usuario";
+                        return;
+                    }
+                }
                 SelectedUser.Username = EditUsername;
                 SelectedUser.FullName = EditFullName;
-                SelectedUser.Email = EditEmail;
                 SelectedUser.Role = EditRole;
                 SelectedUser.IsActive = EditIsActive;
 
@@ -200,7 +232,7 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
                 var existing = await repo.FindAsync(u => u.Username == EditUsername);
                 if (existing.Count > 0)
                 {
-                    UsernameError = "Ya existe un usuario con ese nombre";
+                    UsernameError = "Ya existe un usuario con este nombre de usuario";
                     return;
                 }
 
@@ -208,7 +240,6 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
                 {
                     Username = EditUsername,
                     FullName = EditFullName,
-                    Email = EditEmail,
                     PasswordHash = _passwordHasher.Hash(EditPassword),
                     Role = EditRole,
                     IsActive = EditIsActive,
@@ -230,7 +261,7 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     }
 
     [RelayCommand]
-    private void ToggleEditor()
+    private async Task ToggleEditorAsync()
     {
         if (IsEditorOpen)
         {
@@ -240,9 +271,9 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         else
         {
             if (SelectedUser is not null)
-                EditUser(null);
+                await EditUserAsync(null);
             else
-                NewUser();
+                await NewUserAsync();
         }
     }
 

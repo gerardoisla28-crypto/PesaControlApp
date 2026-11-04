@@ -173,9 +173,6 @@
                 <TextBox Text="{Binding EditFullName}" Margin="0,0,0,8" />
                 <TextBlock Text="{Binding FullNameError}" Style="{StaticResource FieldError}" />
 
-                <Label Content="Email" Style="{StaticResource FormLabel}" />
-                <TextBox Text="{Binding EditEmail}" Margin="0,0,0,8" />
-
                 <Label Content="Rol" Style="{StaticResource FormLabel}" />
                 <ComboBox ItemsSource="{Binding Roles}"
                           SelectedItem="{Binding EditRole}"
@@ -183,6 +180,10 @@
                 <TextBlock Text="{Binding RoleError}" Style="{StaticResource FieldError}" />
 
                 <Label Content="Contraseña" Style="{StaticResource FormLabel}" />
+                <TextBlock Text="Al editar, dejar vacío para mantener la contraseña actual."
+                           FontSize="11" Margin="0,-2,0,4" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
                 <PasswordBox x:Name="PasswordInput" Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
                              Style="{StaticResource MaterialDesignRevealPasswordBox}"
                              ToolTip="Entre 14 y 128 caracteres para SuperAdmin y Admin; entre 8 y 128 para Operator y Viewer. Dejar vacío para mantener la actual al editar." />
