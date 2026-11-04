@@ -78,7 +78,12 @@ Cada puesto guarda y numera en un **almacén local** y sincroniza con el servido
 - [x] Contador local por serie de puesto, asignado en `CreateAsync` dentro de la misma transacción que guarda el pesaje (formato `STGO-2026-10-0001`, reinicio mensual). Probado: 100 pesajes concurrentes sin huecos y un guardado fallido no consume número. *Hecho.*
 - [ ] Agregar a los pesajes: versión o fecha de modificación y estado de sincronización. *(Ya tienen el código de puesto, `StationCode`.)*
 - [ ] Servicio de sincronización en segundo plano (subir pendientes, bajar catálogos y tickets abiertos), con reintentos.
-- [ ] **Exportación incremental a archivo** (pesajes pendientes desde la última exportación, con sus fotos) e **importación que fusiona sin borrar** (no reutilizar tal cual la restauración actual, que vacía las tablas).
+- [ ] **Exportación incremental a archivo** (los pesajes que se elijan, con sus fotos) e **importación que fusiona sin borrar** (no reutilizar tal cual la restauración actual, que vacía las tablas).
+  - *Tramo 1 hecho en la rama `feature/file-exchange`:* servicio `WeighingExchangeService` y archivo zip (`exchange.json` con los pesajes y los datos de su empresa y producto en lugar de los Id locales, `manifest.json` con la suma de verificación y `photos/`). Probado: exportación e importación de pesajes con sus fotos. *(Se probó antes con una marca de "pendiente de exportar", que se eliminó en el tramo 4.)*
+  - *Decisiones:* los catálogos se emparejan por RUT (sin puntos ni guiones) y luego por nombre sin distinguir mayúsculas; sin cifrado por ahora; **sin fechas de modificación**: si el mismo ticket llega con datos distintos en el mismo grupo (entrada o salida), se conserva la versión local y se informa el conflicto en el resumen.
+  - *Tramo 2 hecho:* importación que fusiona sin borrar (`WeighingExchangeService.ImportAsync`). Verifica la suma de verificación antes de tocar la base y es todo o nada; empareja empresas por RUT y luego por nombre, y productos por nombre; une la entrada y la salida de un mismo ticket; ante datos distintos conserva el local y lo informa; una anulación prevalece; importar dos veces no duplica; Probado con dos puestos simulados (STGO y RM), con archivo alterado, archivo ajeno, y reinstalación del propio puesto, cuyo contador de tickets continúa después del mayor número.
+  - *Tramo 3 hecho (rediseñado):* el intercambio vive en la pantalla **Registros**, no en una pestaña aparte. Una casilla por pesaje, **Seleccionar todos** (todo el filtro, en todas las páginas) y **Quitar selección**, contador "N seleccionados de T", **Exportar seleccionados** e **Importar archivo** (para llevar solo lo nuevo basta filtrar por fechas y pulsar Seleccionar todos); tras importar se abre una ventana con el resumen y la lista de conflictos y la lista se refresca. Solo SuperAdmin, Admin y Operator ven estas acciones (Viewer no). Verificado con la vista real: selección entre páginas, filtros, exportar 24 de 25, importar, archivo inválido, rol Viewer y sin errores de enlace de datos. Probado a mano el 2026-11-04 con la app abierta: cuadros de Guardar y Abrir archivo de Windows y ventana de resultado (importar un archivo de otro puesto con 4 pesajes: 4 nuevos y, al repetirlo, 4 sin cambios; la empresa con el mismo RUT se reutilizó).
+  - *Tramo 4 hecho (simplificación):* se eliminó la marca de "pendiente de exportar" (campo `ExportPending`, filtro y columna Exportación): para saber qué llevar se usan los filtros de fecha de Registros. Migración `RemoveExportPending` en SQLite y PostgreSQL. Si más adelante la sincronización con el servidor necesita saber qué falta por subir, tendrá su propio estado de sincronización (ver la tarea "versión o fecha de modificación y estado de sincronización").
 - [ ] Registro manual de salida en otro puesto.
 - [ ] Copia local de usuarios para el login sin conexión.
 - [ ] Indicador visible del estado de conexión y de los registros pendientes de sincronizar.
@@ -188,13 +193,7 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] Dejar `SerialTest` fuera del instalador y documentado.
 - [ ] CI mínimo con `dotnet build` y `dotnet test`.
 - [ ] README y manual de instalación y soporte.
-- [ ] **Verificación manual pendiente del aviso de cambios sin guardar** en Usuarios, Catálogos y Control (editor de dispositivos). Está implementado (`IUnsavedChanges` y `EditorTracker`) y probado con la lógica de Configuración, pero no con estas pantallas en la app real. Comprobar:
-  - Abrir un formulario de usuario, escribir algo y pulsar otra sección del menú: debe preguntar.
-  - Abrir un formulario de catálogo (producto, empresa, operador o conductor), escribir algo y cerrar la ventana: debe preguntar.
-  - Abrir y cancelar un formulario **sin cambios**: no debe preguntar.
-  - Control: lo mismo con el editor de dispositivos, barrera y semáforo.
-  - "Guardar y continuar" con un formulario inválido (falta un dato obligatorio): debe quedarse en la pantalla.
-  - Al cerrar la app con el aviso, comprobar en el Administrador de tareas que el proceso termina; si queda abierto, revisar el cierre de hilos de cámara y puerto serie.
+- [x] **Verificación manual del aviso de cambios sin guardar** en Usuarios, Catálogos y Control (editor de dispositivos): comprobada en la app real el 2026-11-04. En Usuarios además se extendió al botón "Crear Usuario" y al lápiz de cada fila, que preguntan antes de reemplazar un editor con cambios.
 
 ## Orden de trabajo sugerido
 
