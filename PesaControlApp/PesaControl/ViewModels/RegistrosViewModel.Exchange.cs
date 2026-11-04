@@ -14,7 +14,6 @@ namespace PesaControl.UI.ViewModels;
 public partial class RegistrosViewModel
 {
     private const string FileFilter = "Intercambio de pesajes (*.zip)|*.zip|Todos los archivos (*.*)|*.*";
-    private const string AllExports = "Todos";
 
     private WeighingExchangeService _exchange = null!;
     private DatabaseService _db = null!;
@@ -25,10 +24,7 @@ public partial class RegistrosViewModel
     private List<WeighingRecord> _attached = [];
 
     public bool CanExchange { get; private set; }
-    public string[] ExportOptions { get; } = [AllExports, "Pendientes", "Ya exportados"];
 
-    [ObservableProperty] private string _filterExport = AllExports;
-    [ObservableProperty] private int _pendingCount;
     [ObservableProperty] private int _selectedInFilterCount;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private int _progressValue;
@@ -46,13 +42,6 @@ public partial class RegistrosViewModel
         _exchange = new WeighingExchangeService(db);
         CanExchange = UserRoles.CanExchangeData(role);
     }
-
-    private ExportFilter CurrentExportFilter() => FilterExport switch
-    {
-        "Pendientes" => ExportFilter.Pending,
-        "Ya exportados" => ExportFilter.Exported,
-        _ => ExportFilter.All
-    };
 
     // ── Selección ──
 
@@ -82,22 +71,15 @@ public partial class RegistrosViewModel
 
     private void UpdateSelectedCount() => SelectedInFilterCount = _filterIds.Count(_selectedIds.Contains);
 
-    // Los Id de todo el filtro (todas las páginas) y cuántos pendientes hay en total.
+    // Los Id de todo el filtro (todas las páginas).
     private async Task RefreshFilterIdsAsync()
     {
         _filterIds = await _weighingRepo.GetFilteredIdsAsync(
             string.IsNullOrWhiteSpace(SearchPlate) ? null : SearchPlate,
             string.IsNullOrWhiteSpace(SearchTicket) ? null : SearchTicket,
             FilterFrom, FilterTo, FilterStatus,
-            FilterProduct?.Id, FilterCompany?.Id, CurrentExportFilter());
+            FilterProduct?.Id, FilterCompany?.Id);
         UpdateSelectedCount();
-        await RefreshPendingCountAsync();
-    }
-
-    private async Task RefreshPendingCountAsync()
-    {
-        try { PendingCount = await _exchange.CountPendingAsync(); }
-        catch { /* el contador es informativo */ }
     }
 
     [RelayCommand]
@@ -175,8 +157,7 @@ public partial class RegistrosViewModel
     {
         var count = result.Weighings == 1 ? "1 pesaje" : $"{result.Weighings} pesajes";
         var photos = result.Photos == 1 ? "1 foto" : $"{result.Photos} fotos";
-        var left = PendingCount switch { 0 => "No quedan pesajes pendientes.", 1 => "Queda 1 pesaje pendiente.", _ => $"Quedan {PendingCount} pesajes pendientes." };
-        return $"Archivo creado: {Path.GetFileName(result.FilePath)} ({count} y {photos}). {left} Llévelo al otro equipo e impórtelo allí.";
+        return $"Archivo creado: {Path.GetFileName(result.FilePath)} ({count} y {photos}). Llévelo al otro equipo e impórtelo allí.";
     }
 
     // ── Importar ──

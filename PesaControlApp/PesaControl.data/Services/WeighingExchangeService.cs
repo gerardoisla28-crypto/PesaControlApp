@@ -30,36 +30,22 @@ public partial class WeighingExchangeService
     public static string SuggestFileName(string stationCode)
         => $"intercambio-{stationCode}-{DateTime.Now:yyyyMMdd-HHmm}.zip";
 
-    // Exporta los pesajes pendientes (o todos) con sus fotos. Al terminar, los exportados dejan de estar pendientes.
-    public Task<ExchangeExportResult> ExportSelectedAsync(string destinationPath, IReadOnlyCollection<int> ids, IProgress<int>? progress = null)
-        => ExportAsync(destinationPath, onlyPending: true, progress, ids);
-
-    // Con ids se exportan solo esos pesajes: los demás siguen pendientes para otra exportación.
-    public async Task<ExchangeExportResult> ExportAsync(string destinationPath, bool onlyPending, IProgress<int>? progress = null, IReadOnlyCollection<int>? ids = null)
+    // Exporta los pesajes elegidos con sus fotos.
+    public async Task<ExchangeExportResult> ExportSelectedAsync(string destinationPath, IReadOnlyCollection<int> ids, IProgress<int>? progress = null)
     {
         var stationCode = await _db.GetStationCodeAsync()
             ?? throw new InvalidOperationException("El código de puesto no está configurado.");
 
         using var ctx = _db.CreateContext();
         var records = new List<WeighingRecord>();
-        if (ids is not null)
+        foreach (var chunk in ids.Distinct().Chunk(500))
         {
-            foreach (var chunk in ids.Distinct().Chunk(500))
-            {
-                var part = chunk.ToList();
-                records.AddRange(await ctx.WeighingRecords.AsNoTracking()
-                    .Include(w => w.Product).Include(w => w.Company)
-                    .Where(w => part.Contains(w.Id)).ToListAsync());
-            }
-            records = records.OrderBy(w => w.Id).ToList();
+            var part = chunk.ToList();
+            records.AddRange(await ctx.WeighingRecords.AsNoTracking()
+                .Include(w => w.Product).Include(w => w.Company)
+                .Where(w => part.Contains(w.Id)).ToListAsync());
         }
-        else
-        {
-            var query = ctx.WeighingRecords.AsNoTracking().Include(w => w.Product).Include(w => w.Company).AsQueryable();
-            if (onlyPending)
-                query = query.Where(w => w.ExportPending);
-            records = await query.OrderBy(w => w.Id).ToListAsync();
-        }
+        records = records.OrderBy(w => w.Id).ToList();
         progress?.Report(20);
 
         var package = new ExchangePackage { StationCode = stationCode };
@@ -114,40 +100,14 @@ public partial class WeighingExchangeService
             if (File.Exists(temp)) File.Delete(temp);
             throw;
         }
-        progress?.Report(80);
-
-        await MarkAsExportedAsync(ctx, records.Select(r => r.Id).ToList());
         progress?.Report(100);
 
         return new ExchangeExportResult
         {
             FilePath = destinationPath,
-            OnlyPending = onlyPending,
             Weighings = records.Count,
             Photos = photoCount
         };
-    }
-
-    // Los pesajes pendientes de exportar, del más reciente al más antiguo.
-    public async Task<List<ExchangeCandidate>> ListPendingAsync()
-    {
-        using var ctx = _db.CreateContext();
-        return await ctx.WeighingRecords.AsNoTracking()
-            .Where(w => w.ExportPending)
-            .OrderByDescending(w => w.WeighOutTime ?? w.WeighInTime)
-            .Select(w => new ExchangeCandidate
-            {
-                Id = w.Id, TicketNumber = w.TicketNumber, LicensePlate = w.LicensePlate,
-                WeighInTime = w.WeighInTime, WeighOutTime = w.WeighOutTime,
-                Status = w.Status, IsExitWeightManual = w.IsExitWeightManual
-            })
-            .ToListAsync();
-    }
-
-    public async Task<int> CountPendingAsync()
-    {
-        using var ctx = _db.CreateContext();
-        return await ctx.WeighingRecords.CountAsync(w => w.ExportPending);
     }
 
     private static ExchangeWeighing ToExchange(WeighingRecord r) => new()
@@ -183,16 +143,5 @@ public partial class WeighingExchangeService
         var entry = archive.CreateEntry(name, CompressionLevel.Optimal);
         await using var stream = entry.Open();
         await stream.WriteAsync(content);
-    }
-
-    // ExecuteUpdate no pasa por SaveChanges, así que no vuelve a marcar el pesaje como pendiente.
-    private static async Task MarkAsExportedAsync(AppDbContext ctx, List<int> ids)
-    {
-        foreach (var chunk in ids.Chunk(500))
-        {
-            var part = chunk.ToList();
-            await ctx.WeighingRecords.Where(w => part.Contains(w.Id))
-                .ExecuteUpdateAsync(s => s.SetProperty(w => w.ExportPending, false));
-        }
     }
 }

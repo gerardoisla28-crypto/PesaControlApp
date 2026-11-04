@@ -80,14 +80,6 @@
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0" Visibility="{Binding CanExchange, Converter={StaticResource BoolToVis}}">
-                        <ComboBox ItemsSource="{Binding ExportOptions}"
-                                  SelectedItem="{Binding FilterExport}"
-                                  Width="130" ToolTip="Filtrar por estado de exportación" />
-                        <TextBlock Text="Exportación" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
-                    </StackPanel>
-
                 </WrapPanel>
 
                 <WrapPanel>
@@ -186,26 +178,6 @@
                                                    HorizontalAlignment="Stretch"
                                                    TextAlignment="Center"
                                                    VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn x:Name="ExportColumn" Header="Exportación" Width="100">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock HorizontalAlignment="Stretch" TextAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text" Value="Exportado" />
-                                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding ExportPending}" Value="True">
-                                                            <Setter Property="Text" Value="Pendiente" />
-                                                            <Setter Property="Foreground" Value="{StaticResource AccentOrangeBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>

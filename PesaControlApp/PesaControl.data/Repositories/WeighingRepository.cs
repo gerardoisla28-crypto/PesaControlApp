@@ -72,8 +72,7 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
         string? plate, string? ticket,
         DateTime? from, DateTime? to,
         WeighingStatus? status,
-        int? productId, int? companyId,
-        ExportFilter exportFilter)
+        int? productId, int? companyId)
     {
         if (!string.IsNullOrWhiteSpace(plate))
             query = query.Where(w => w.LicensePlate.Contains(plate.Trim().ToUpper()));
@@ -96,26 +95,20 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
         if (companyId.HasValue)
             query = query.Where(w => w.CompanyId == companyId.Value);
 
-        return exportFilter switch
-        {
-            ExportFilter.Pending => query.Where(w => w.ExportPending),
-            ExportFilter.Exported => query.Where(w => !w.ExportPending),
-            _ => query
-        };
+        return query;
     }
 
-    // Sin seguimiento: el contexto del ViewModel vive mucho tiempo y mostraría el estado de exportación viejo.
+    // Sin seguimiento: el contexto del ViewModel vive mucho tiempo y mostraría datos viejos.
     public async Task<PagedResult<WeighingRecord>> GetPagedAsync(
         int page, int pageSize,
         string? plate, string? ticket,
         DateTime? from, DateTime? to,
         WeighingStatus? status,
-        int? productId, int? companyId,
-        ExportFilter exportFilter = ExportFilter.All)
+        int? productId, int? companyId)
     {
         var query = ApplyFilters(
             _dbSet.AsNoTracking().Include(w => w.Product).Include(w => w.Company),
-            plate, ticket, from, to, status, productId, companyId, exportFilter);
+            plate, ticket, from, to, status, productId, companyId);
 
         var totalCount = await query.CountAsync();
 
@@ -139,9 +132,8 @@ public class WeighingRepository : Repository<WeighingRecord>, IWeighingRepositor
         string? plate, string? ticket,
         DateTime? from, DateTime? to,
         WeighingStatus? status,
-        int? productId, int? companyId,
-        ExportFilter exportFilter = ExportFilter.All)
-        => await ApplyFilters(_dbSet.AsNoTracking(), plate, ticket, from, to, status, productId, companyId, exportFilter)
+        int? productId, int? companyId)
+        => await ApplyFilters(_dbSet.AsNoTracking(), plate, ticket, from, to, status, productId, companyId)
             .OrderByDescending(w => w.WeighInTime)
             .Select(w => w.Id)
             .ToListAsync();

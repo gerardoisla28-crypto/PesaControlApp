@@ -584,9 +584,6 @@ namespace PesaControl.Data.Migrations.Sqlite
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("ExportPending")
-                        .HasColumnType("INTEGER");
-
                     b.Property<decimal>("GrossWeight")
                         .HasColumnType("decimal(18,3)");
 

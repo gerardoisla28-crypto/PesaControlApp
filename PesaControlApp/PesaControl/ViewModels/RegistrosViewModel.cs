@@ -146,7 +146,7 @@ public partial class RegistrosViewModel : ObservableObject
             string.IsNullOrWhiteSpace(SearchPlate) ? null : SearchPlate,
             string.IsNullOrWhiteSpace(SearchTicket) ? null : SearchTicket,
             FilterFrom, FilterTo, FilterStatus,
-            FilterProduct?.Id, FilterCompany?.Id, CurrentExportFilter());
+            FilterProduct?.Id, FilterCompany?.Id);
 
         App.Current.Dispatcher.Invoke(() =>
         {
@@ -175,7 +175,6 @@ public partial class RegistrosViewModel : ObservableObject
         FilterStatus = null;
         FilterProduct = null;
         FilterCompany = null;
-        FilterExport = AllExports;
         await SearchAsync();
     }
 

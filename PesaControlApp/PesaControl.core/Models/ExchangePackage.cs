@@ -77,7 +77,6 @@ public class ExchangeWeighing
 public class ExchangeExportResult
 {
     public string FilePath { get; set; } = "";
-    public bool OnlyPending { get; set; }
     public int Weighings { get; set; }
     public int Photos { get; set; }
 }
@@ -114,26 +113,3 @@ public class ExchangeImportResult
     public int PhotosCopied { get; set; }
     public List<ExchangeConflict> Conflicts { get; set; } = [];
 }
-
-// Un pesaje pendiente de exportar, tal como se muestra en la lista para elegir qué llevar en el archivo.
-public class ExchangeCandidate
-{
-    public int Id { get; set; }
-    public string TicketNumber { get; set; } = "";
-    public string LicensePlate { get; set; } = "";
-    public DateTime WeighInTime { get; set; }
-    public DateTime? WeighOutTime { get; set; }
-    public WeighingStatus Status { get; set; }
-    public bool IsExitWeightManual { get; set; }
-
-    // Fecha del último movimiento del pesaje: la salida si ya la tiene y, si no, la entrada.
-    public DateTime Activity => WeighOutTime ?? WeighInTime;
-
-    public string Kind
-        => Status == WeighingStatus.Cancelled ? "Anulado"
-         : WeighOutTime is not null && IsExitWeightManual ? "Salida manual"
-         : WeighOutTime is not null ? "Salida"
-         : "Entrada";
-}
-
-public enum ExportFilter { All, Pending, Exported }

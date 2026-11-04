@@ -16,14 +16,11 @@ public partial class RegistrosView : UserControl
         Loaded += (_, _) => ApplyPermissions();
     }
 
-    // Quien no puede exportar ni importar no ve las columnas de casilla y de estado de exportación.
+    // Quien no puede exportar ni importar no ve la columna de casillas.
     private void ApplyPermissions()
     {
         if (DataContext is RegistrosViewModel { CanExchange: false })
-        {
             CheckColumn.Width = 0;
-            ExportColumn.Width = 0;
-        }
     }
 
     private void ListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
