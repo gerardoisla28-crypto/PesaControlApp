@@ -311,7 +311,7 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Estado" Width="100">
+                            <GridViewColumn Header="Estado" Width="125">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Status, Converter={StaticResource WeighingStatusConverter}}"
