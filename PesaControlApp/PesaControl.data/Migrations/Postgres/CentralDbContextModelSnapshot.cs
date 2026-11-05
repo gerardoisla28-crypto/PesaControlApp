@@ -402,6 +402,9 @@ namespace PesaControl.Data.Migrations.Postgres
                     b.Property<int>("TcpPort")
                         .HasColumnType("integer");
 
+                    b.Property<int>("WeightDecimals")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.ToTable("ScaleConfigs", (string)null);
@@ -628,6 +631,9 @@ namespace PesaControl.Data.Migrations.Postgres
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<decimal>("NetWeight")
                         .HasColumnType("decimal(18,3)");
 
@@ -669,6 +675,16 @@ namespace PesaControl.Data.Migrations.Postgres
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("SyncStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<decimal>("TareWeight")
                         .HasColumnType("decimal(18,3)");
 
@@ -683,6 +699,9 @@ namespace PesaControl.Data.Migrations.Postgres
                     b.Property<DateTime?>("WeighOutTime")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("WeightDecimals")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
@@ -690,6 +709,8 @@ namespace PesaControl.Data.Migrations.Postgres
                     b.HasIndex("LicensePlate");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("SyncStatus");
 
                     b.HasIndex("TicketNumber")
                         .IsUnique();

@@ -259,7 +259,8 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             TcpPort = SelectedScale.TcpPort,
             SlaveId = SelectedScale.SlaveId,
             RegisterAddress = SelectedScale.RegisterAddress,
-            ReadIntervalMs = SelectedScale.ReadIntervalMs
+            ReadIntervalMs = SelectedScale.ReadIntervalMs,
+            WeightDecimals = SelectedScale.WeightDecimals
         };
         SelectedProtocolName = SelectedScale.ProtocolType switch
         {
@@ -267,6 +268,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             ProtocolType.ModbusRtu => "Modbus RTU",
             ProtocolType.Sensoc => "Sensoc",
             ProtocolType.SensocarA12 => "Sensocar A12",
+            ProtocolType.Simulator => "Simulador",
             _ => "Serial"
         };
         _scaleSnapshot = SnapshotScale();
@@ -335,7 +337,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 
     // ── Protocol params (legacy - for editing single scale) ──
     [ObservableProperty] private string _selectedProtocolName = "Serial";
-    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc", "Sensocar A12"];
+    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc", "Sensocar A12", "Simulador"];
 
     [ObservableProperty] private int _serialBaudRate = 9600;
     [ObservableProperty] private int _serialParity;
@@ -348,6 +350,11 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     [ObservableProperty] private int _modbusRegister;
     [ObservableProperty] private int _readIntervalMs = 200;
 
+    public record WeightDecimalOption(int Value, string Label);
+    public WeightDecimalOption[] WeightDecimalOptions { get; } =
+    [
+        new(-1, "Automático"), new(0, "0 (sin decimales)"), new(1, "1 decimal"), new(2, "2 decimales"), new(3, "3 decimales")
+    ];
     public int[] BaudRates { get; } = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200];
     public int[] ParityOptions { get; } = [0, 1, 2];
     public int[] DataBitsOptions { get; } = [5, 6, 7, 8];
@@ -433,6 +440,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                 "Modbus RTU" => ProtocolType.ModbusRtu,
                 "Sensoc" => ProtocolType.Sensoc,
                 "Sensocar A12" => ProtocolType.SensocarA12,
+                "Simulador" => ProtocolType.Simulator,
                 _ => ProtocolType.Serial
             };
     }
@@ -456,6 +464,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                     "Modbus RTU" => ProtocolType.ModbusRtu,
                     "Sensoc" => ProtocolType.Sensoc,
                     "Sensocar A12" => ProtocolType.SensocarA12,
+                    "Simulador" => ProtocolType.Simulator,
                     _ => ProtocolType.Serial
                 },
                 PortName = EditingScale?.PortName ?? "COM1",
@@ -476,6 +485,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                 "Modbus RTU" => new ModbusRtuProtocol(),
                 "Sensoc" => new SensocProtocol(),
                 "Sensocar A12" => new SensocarA12Protocol(),
+                "Simulador" => new SimulatorProtocol(),
                 _ => new SerialProtocol()
             };
 

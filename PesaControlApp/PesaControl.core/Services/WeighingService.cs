@@ -13,6 +13,8 @@ public class WeighingService
     public IWeighingProtocol Protocol => _protocol;
     public bool IsConnected => _protocol.IsConnected;
     public decimal CurrentWeight { get; private set; }
+    // Decimales detectados en las lecturas de texto (ASCII/serial/red); en Modbus no se pueden detectar.
+    public int DetectedDecimals { get; private set; }
     public bool IsStable { get; private set; }
     public WeightReading? LastReading { get; private set; }
     public int StableWindowSize { get; set; } = 5;
@@ -42,6 +44,7 @@ public class WeighingService
         (oldProtocol as IDisposable)?.Dispose();
 
         _protocol = protocol;
+        DetectedDecimals = 0;
         _config = config;
         WireEvents();
     }
@@ -86,6 +89,9 @@ public class WeighingService
         var isValid = reading.Value != 0 || !string.IsNullOrEmpty(reading.RawData);
         LastReading = isValid ? reading : LastReading;
         if (!isValid) return;
+
+        if (_config.Type is not (ProtocolType.ModbusRtu or ProtocolType.ModbusTcp))
+            DetectedDecimals = Math.Max(DetectedDecimals, Math.Clamp((decimal.GetBits(reading.Value)[3] >> 16) & 0xFF, 0, WeightFormat.MaxDecimals));
 
         CurrentWeight = reading.Value;
         WeightUpdated?.Invoke(this, CurrentWeight);

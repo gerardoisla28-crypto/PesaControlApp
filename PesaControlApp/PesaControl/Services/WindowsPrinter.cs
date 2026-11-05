@@ -90,9 +90,9 @@ public class WindowsPrinter : ITicketPrinter
         sb.AppendLine($"Producto:  {record.Product?.Name ?? "-"}");
         sb.AppendLine($"Empresa:   {record.Company?.Name ?? "-"}");
         sb.AppendLine(new string('-', 40));
-            sb.AppendLine($"Peso entrada: {record.GrossWeight,10:F3} kg");
-            sb.AppendLine($"Peso salida:  {record.TareWeight,10:F3} kg");
-            sb.AppendLine($"Total:        {record.NetWeight,10:F3} kg");
+            sb.AppendLine($"Peso entrada: {record.GrossWeightText,10} kg");
+            sb.AppendLine($"Peso salida:  {record.TareWeightText,10} kg");
+            sb.AppendLine($"Total:        {record.NetWeightText,10} kg");
         sb.AppendLine(new string('=', 40));
         sb.AppendLine(template?.Footer ?? "Gracias por su preferencia");
         return sb.ToString();

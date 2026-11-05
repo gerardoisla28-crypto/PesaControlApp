@@ -102,9 +102,9 @@ public class EscPosPrinter : ITicketPrinter
         sb.Append("\x1B\x61\x01");
         sb.AppendLine("PESOS");
         sb.Append("\x1B\x61\x00");
-            sb.AppendLine($"Peso entrada: {record.GrossWeight,10:F3} kg");
-            sb.AppendLine($"Peso salida:  {record.TareWeight,10:F3} kg");
-            sb.AppendLine($"Total:        {record.NetWeight,10:F3} kg");
+            sb.AppendLine($"Peso entrada: {record.GrossWeightText,10} kg");
+            sb.AppendLine($"Peso salida:  {record.TareWeightText,10} kg");
+            sb.AppendLine($"Total:        {record.NetWeightText,10} kg");
         sb.AppendLine(new string('=', 32));
 
         sb.Append("\x1B\x61\x01");

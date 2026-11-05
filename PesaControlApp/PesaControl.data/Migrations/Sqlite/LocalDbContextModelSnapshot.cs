@@ -379,6 +379,9 @@ namespace PesaControl.Data.Migrations.Sqlite
                     b.Property<int>("TcpPort")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("WeightDecimals")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.ToTable("ScaleConfigs", (string)null);
@@ -595,6 +598,9 @@ namespace PesaControl.Data.Migrations.Sqlite
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("NetWeight")
                         .HasColumnType("decimal(18,3)");
 
@@ -636,6 +642,16 @@ namespace PesaControl.Data.Migrations.Sqlite
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SyncStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("TareWeight")
                         .HasColumnType("decimal(18,3)");
 
@@ -650,6 +666,9 @@ namespace PesaControl.Data.Migrations.Sqlite
                     b.Property<DateTime?>("WeighOutTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("WeightDecimals")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId");
@@ -657,6 +676,8 @@ namespace PesaControl.Data.Migrations.Sqlite
                     b.HasIndex("LicensePlate");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("SyncStatus");
 
                     b.HasIndex("TicketNumber")
                         .IsUnique();

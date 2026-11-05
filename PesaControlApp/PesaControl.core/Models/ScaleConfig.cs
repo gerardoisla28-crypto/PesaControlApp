@@ -20,6 +20,10 @@ public class ScaleConfig
     public byte SlaveId { get; set; } = 1;
     public ushort RegisterAddress { get; set; } = 0;
     public int ReadIntervalMs { get; set; } = 200;
+
+    // Decimales que muestra el visor de esta báscula: -1 = automático (se detectan del texto ASCII), 0 a 3 = fijo; los pesos se muestran igual en toda la app.
+    public int WeightDecimals { get; set; } = -1;
+
     public CommunicationConfig ToCommunicationConfig() => new()
     {
         Type = ProtocolType,

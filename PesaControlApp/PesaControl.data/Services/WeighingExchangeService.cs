@@ -117,6 +117,7 @@ public partial class WeighingExchangeService
         Status = r.Status,
         WeighInTime = r.WeighInTime,
         GrossWeight = r.GrossWeight,
+        WeightDecimals = r.WeightDecimals,
         EntryScaleName = r.EntryScaleName,
         PhotoFile = PhotoName(r.PhotoPath),
         WeighOutTime = r.WeighOutTime,

@@ -12,6 +12,8 @@ public class ScaleInstance
     public bool IsStable => Service.IsStable;
     public bool IsConnected => Service.IsConnected;
     public string Name => Config.Name;
+    // Decimales con que se muestran los pesos de esta báscula (fijos o detectados).
+    public int WeightDecimals => Config.WeightDecimals >= 0 ? Config.WeightDecimals : Service.DetectedDecimals;
 
     public ScaleInstance(ScaleConfig config, WeighingService service)
     {
@@ -95,6 +97,7 @@ public class ScaleManager : IDisposable
             instance.Config.SlaveId = updated.SlaveId;
             instance.Config.RegisterAddress = updated.RegisterAddress;
             instance.Config.ReadIntervalMs = updated.ReadIntervalMs;
+            instance.Config.WeightDecimals = updated.WeightDecimals;
 
             var newProtocol = CreateProtocol(updated);
             await instance.Service.SetProtocol(newProtocol, updated.ToCommunicationConfig());
@@ -122,6 +125,7 @@ public class ScaleManager : IDisposable
             ProtocolType.ModbusRtu => new ModbusRtuProtocol(),
             ProtocolType.Sensoc => new SensocProtocol(),
             ProtocolType.SensocarA12 => new SensocarA12Protocol(),
+            ProtocolType.Simulator => new SimulatorProtocol(),
             _ => new SerialProtocol()
         };
     }

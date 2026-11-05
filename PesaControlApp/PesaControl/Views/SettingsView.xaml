@@ -90,6 +90,13 @@
                             <CheckBox IsChecked="{Binding EditingScale.IsActive}" Content="Activa"
                                       Margin="0,0,0,8" />
 
+                            <Label Content="Decimales del visor" Style="{StaticResource FormLabel}" />
+                            <ComboBox ItemsSource="{Binding WeightDecimalOptions}"
+                                      SelectedValuePath="Value" DisplayMemberPath="Label"
+                                      SelectedValue="{Binding EditingScale.WeightDecimals}"
+                                      ToolTip="Automático detecta los decimales en protocolos de texto (ASCII, serial, Ethernet). En Modbus elija el número que muestra el visor."
+                                      Margin="0,0,0,8" />
+
                             <Label Content="Protocolo" Style="{StaticResource FormLabel}" />
                             <ComboBox ItemsSource="{Binding ProtocolNames}"
                                       SelectedItem="{Binding SelectedProtocolName}"

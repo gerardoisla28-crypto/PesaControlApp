@@ -255,7 +255,7 @@
                             <GridViewColumn Header="Peso Entrada" Width="100">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding GrossWeight, StringFormat={}{0:N3}}"
+                                        <TextBlock Text="{Binding GrossWeightText}"
                                                    HorizontalAlignment="Stretch"
                                                    TextAlignment="Center"
                                                    VerticalAlignment="Center" />
@@ -265,7 +265,7 @@
                             <GridViewColumn Header="Peso Salida" Width="100">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding TareWeight, StringFormat={}{0:N3}}"
+                                        <TextBlock Text="{Binding TareWeightText}"
                                                    HorizontalAlignment="Stretch"
                                                    TextAlignment="Center"
                                                    VerticalAlignment="Center" />
@@ -275,7 +275,7 @@
                             <GridViewColumn Header="Peso Neto" Width="100">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding NetWeight, StringFormat={}{0:N3}}"
+                                        <TextBlock Text="{Binding NetWeightText}"
                                                    HorizontalAlignment="Stretch"
                                                    TextAlignment="Center"
                                                    VerticalAlignment="Center"

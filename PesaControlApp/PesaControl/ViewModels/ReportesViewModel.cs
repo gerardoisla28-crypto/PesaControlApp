@@ -128,11 +128,12 @@ public partial class ReportesViewModel : ObservableObject
         var records = filtered.OrderBy(r => r.WeighInTime).ToList();
         var completed = records.Where(r => r.Status == WeighingStatus.Completed).ToList();
 
-        var totalKg = completed.Sum(r => (double)r.NetWeight);
+        // Totales y promedio con los decimales del visor (el mayor entre los pesajes del periodo).
+        var decimals = completed.Count > 0 ? completed.Max(r => r.WeightDecimals) : 0;
         TotalRecords = records.Count.ToString("N0");
-        TotalNetWeight = $"{totalKg:N0} kg";
+        TotalNetWeight = WeightFormat.FormatKg(completed.Sum(r => r.NetWeight), decimals);
         AvgNetWeight = completed.Count > 0
-            ? $"{completed.Average(r => (double)r.NetWeight):N1} kg"
+            ? WeightFormat.FormatKg(completed.Average(r => r.NetWeight), decimals)
             : "0 kg";
 
         var minDate = records.Count > 0 ? records.Min(r => r.WeighInTime.Date) : DateTime.Today.AddDays(-30);
@@ -274,7 +275,7 @@ public partial class ReportesViewModel : ObservableObject
                 DataLabelsPosition = DataLabelsPosition.Right,
                 DataLabelsPaint = new SolidColorPaint(new SKColor(0x1F, 0x29, 0x37)),
                 DataLabelsSize = 12,
-                DataLabelsFormatter = point => $"{point.Model:N0} kg"
+                DataLabelsFormatter = point => $"{point.Model:#,##0.###} kg"
             }
         ];
     }
@@ -314,7 +315,7 @@ public partial class ReportesViewModel : ObservableObject
             DataLabelsFormatter = point =>
             {
                 var pct = total > 0 ? (double)point.Model / total * 100 : 0;
-                return $"{point.Model} ({pct:N1}%)";
+                return $"{point.Model} ({pct:N0}%)";
             },
             HoverPushout = 12
         }).ToArray();
