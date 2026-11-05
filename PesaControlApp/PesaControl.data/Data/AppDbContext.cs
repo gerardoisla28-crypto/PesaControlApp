@@ -56,6 +56,8 @@ public abstract class AppDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(e => e.Company).WithMany().HasForeignKey(e => e.CompanyId).OnDelete(DeleteBehavior.SetNull);
+            entity.Property(e => e.SyncStatus).HasConversion<string>().HasMaxLength(10).HasDefaultValue(SyncStatus.Pending);
+            entity.HasIndex(e => e.SyncStatus);
             entity.HasIndex(e => e.TicketNumber).IsUnique();
             entity.HasIndex(e => e.WeighInTime);
             entity.HasIndex(e => e.LicensePlate);
