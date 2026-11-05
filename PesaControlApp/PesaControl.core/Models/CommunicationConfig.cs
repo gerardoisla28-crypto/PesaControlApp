@@ -7,7 +7,8 @@ public enum ProtocolType
     ModbusRtu,
     TcpClient,
     Sensoc,
-    SensocarA12
+    SensocarA12,
+    KronosModbus
 }
 
 public class CommunicationConfig

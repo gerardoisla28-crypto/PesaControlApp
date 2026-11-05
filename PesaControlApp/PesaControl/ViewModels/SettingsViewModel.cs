@@ -267,6 +267,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             ProtocolType.ModbusRtu => "Modbus RTU",
             ProtocolType.Sensoc => "Sensoc",
             ProtocolType.SensocarA12 => "Sensocar A12",
+            ProtocolType.KronosModbus => "Kronos Modbus",
             _ => "Serial"
         };
         _scaleSnapshot = SnapshotScale();
@@ -335,7 +336,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 
     // ── Protocol params (legacy - for editing single scale) ──
     [ObservableProperty] private string _selectedProtocolName = "Serial";
-    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc", "Sensocar A12"];
+    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc", "Sensocar A12", "Kronos Modbus"];
 
     [ObservableProperty] private int _serialBaudRate = 9600;
     [ObservableProperty] private int _serialParity;
@@ -419,7 +420,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         }
     }
 
-    public bool IsSerialProtocol => SelectedProtocolName is "Serial" or "Modbus RTU" or "Sensoc" or "Sensocar A12";
+    public bool IsSerialProtocol => SelectedProtocolName is "Serial" or "Modbus RTU" or "Sensoc" or "Sensocar A12" or "Kronos Modbus";
     public bool IsTcpProtocol => SelectedProtocolName == "Modbus TCP";
 
     partial void OnSelectedProtocolNameChanged(string value)
@@ -433,6 +434,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                 "Modbus RTU" => ProtocolType.ModbusRtu,
                 "Sensoc" => ProtocolType.Sensoc,
                 "Sensocar A12" => ProtocolType.SensocarA12,
+                "Kronos Modbus" => ProtocolType.KronosModbus,
                 _ => ProtocolType.Serial
             };
     }
@@ -456,6 +458,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                     "Modbus RTU" => ProtocolType.ModbusRtu,
                     "Sensoc" => ProtocolType.Sensoc,
                     "Sensocar A12" => ProtocolType.SensocarA12,
+                    "Kronos Modbus" => ProtocolType.KronosModbus,
                     _ => ProtocolType.Serial
                 },
                 PortName = EditingScale?.PortName ?? "COM1",
@@ -476,13 +479,14 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                 "Modbus RTU" => new ModbusRtuProtocol(),
                 "Sensoc" => new SensocProtocol(),
                 "Sensocar A12" => new SensocarA12Protocol(),
+                "Kronos Modbus" => new KronosModbusRtuProtocol(),
                 _ => new SerialProtocol()
             };
 
             var service = new WeighingService(protocol, config);
             await service.ConnectAsync();
 
-            if (protocolName is "Sensoc" or "Sensocar A12")
+            if (protocolName is "Sensoc" or "Sensocar A12" or "Kronos Modbus")
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 WeightReading? reading = null;
@@ -495,10 +499,12 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
                 catch (TaskCanceledException) { }
                 protocol.WeightChanged -= handler;
 
-                if (reading?.Value != 0)
-                    StatusMessage = $"Conexión exitosa — peso: {reading.Value} kg";
+                if (!protocol.IsConnected)
+                    StatusMessage = $"Error: no se pudo abrir {config.PortName}. Verifique que exista y que ningún otro programa lo use.";
+                else if (reading is { } r)
+                    StatusMessage = $"Conexión exitosa — peso: {r.Value} kg";
                 else
-                    StatusMessage = "Conectado, esperando datos de la báscula...";
+                    StatusMessage = "Conectado, pero sin respuesta del visor. Verifique protocolo, esclavo y baudios.";
             }
             else
             {
