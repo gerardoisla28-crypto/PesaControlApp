@@ -144,8 +144,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)),
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)),
                 Labeler = value =>
                 {
                     try { return new DateTime((long)value).ToString("dd/MMM"); }
@@ -159,8 +159,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
                 MinLimit = 0,
                 TextSize = 11
             }
@@ -173,8 +173,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
                 MinLimit = 0,
                 TextSize = 11
             }
@@ -183,8 +183,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)),
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)),
                 TextSize = 11,
                 Labeler = value =>
                 {
@@ -201,8 +201,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
                 MinLimit = 0,
                 TextSize = 11
             }
@@ -211,8 +211,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)),
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)),
                 TextSize = 11,
                 Labeler = value =>
                 {
@@ -272,7 +272,7 @@ public partial class ReportesViewModel : ObservableObject
                 Stroke = null,
                 Name = "Kilogramos",
                 DataLabelsPosition = DataLabelsPosition.Right,
-                DataLabelsPaint = new SolidColorPaint(SKColors.White),
+                DataLabelsPaint = new SolidColorPaint(new SKColor(0x1F, 0x29, 0x37)),
                 DataLabelsSize = 12,
                 DataLabelsFormatter = point => $"{point.Model:N0} kg"
             }
@@ -307,9 +307,9 @@ public partial class ReportesViewModel : ObservableObject
                 _ => kvp.Key.ToString()
             },
             Fill = new SolidColorPaint(colors.GetValueOrDefault(kvp.Key, SKColors.Gray)),
-            Stroke = new SolidColorPaint(new SKColor(37, 37, 38)) { StrokeThickness = 3 },
+            Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 3 },
             DataLabelsPosition = PolarLabelsPosition.Outer,
-            DataLabelsPaint = new SolidColorPaint(SKColors.LightGray),
+            DataLabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
             DataLabelsSize = 13,
             DataLabelsFormatter = point =>
             {
