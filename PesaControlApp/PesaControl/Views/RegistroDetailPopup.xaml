@@ -84,21 +84,21 @@
                 <StackPanel Grid.Column="1" Margin="8,0,0,0">
                     <TextBlock Text="Peso de Entrada" Style="{StaticResource DetailLabel}" />
                     <Border Style="{StaticResource DetailField}" Background="{StaticResource SurfaceCardBrush}">
-                        <TextBlock Text="{Binding GrossWeight, StringFormat={}{0:N3} kg}"
+                        <TextBlock Text="{Binding GrossWeight, StringFormat='{}{0} kg'}"
                                    Style="{StaticResource DetailValue}" FontSize="22" FontWeight="Bold"
                                    Foreground="{StaticResource AccentBlueBrush}" />
                     </Border>
 
                     <TextBlock Text="Peso de Salida" Style="{StaticResource DetailLabel}" />
                     <Border Style="{StaticResource DetailField}" Background="{StaticResource SurfaceCardBrush}">
-                        <TextBlock Text="{Binding TareWeight, StringFormat={}{0:N3} kg}"
+                        <TextBlock Text="{Binding TareWeight, StringFormat='{}{0} kg'}"
                                    Style="{StaticResource DetailValue}" FontSize="22" FontWeight="Bold"
                                    Foreground="{StaticResource AccentOrangeBrush}" />
                     </Border>
 
                     <TextBlock Text="Peso Neto" Style="{StaticResource DetailLabel}" />
                     <Border Style="{StaticResource DetailField}" Background="{StaticResource SurfaceCardBrush}">
-                        <TextBlock Text="{Binding NetWeight, StringFormat={}{0:N3} kg}"
+                        <TextBlock Text="{Binding NetWeight, StringFormat='{}{0} kg'}"
                                    Style="{StaticResource DetailValue}" FontSize="28" FontWeight="Bold"
                                    Foreground="{StaticResource AccentGreenBrush}" />
                     </Border>

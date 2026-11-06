@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:PesaControl.UI.ViewModels"
         x:Name="DashboardRoot"
         Title="PesaControl Pro - Dashboard"
+        Icon="Assets/app.ico"
         Height="600" Width="1000"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
@@ -28,7 +29,9 @@
                 <Border Grid.Row="0" BorderBrush="{StaticResource SurfaceLightBrush}"
                         BorderThickness="0,0,0,1" Padding="0,20,0,15">
                     <StackPanel>
-                        <TextBlock Text="⚖" FontSize="28" HorizontalAlignment="Center" />
+                        <Image Source="Assets/product-tile.png" Width="110" Height="110"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="PESA CONTROL" Style="{StaticResource SidebarTitle}"
                                    HorizontalAlignment="Center" Margin="0" />
                         <TextBlock Text="Industrial Weighing System"
@@ -145,10 +148,11 @@
                 <StackPanel Grid.Row="3" Margin="15,0,15,15">
                     <Separator Background="{StaticResource SurfaceLightBrush}"
                                Margin="0,0,0,10" />
-                    <TextBlock Text="v1.0.0"
-                               Foreground="{StaticResource TextMutedBrush}"
-                               FontSize="11"
-                               HorizontalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="ARIS Tech  ·  v1.0.0"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   FontSize="11" VerticalAlignment="Center" />
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>

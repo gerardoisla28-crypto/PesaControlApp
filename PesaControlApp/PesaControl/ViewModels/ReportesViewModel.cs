@@ -128,11 +128,12 @@ public partial class ReportesViewModel : ObservableObject
         var records = filtered.OrderBy(r => r.WeighInTime).ToList();
         var completed = records.Where(r => r.Status == WeighingStatus.Completed).ToList();
 
-        var totalKg = completed.Sum(r => (double)r.NetWeight);
+        // Totales y promedio con los decimales del visor (el mayor entre los pesajes del periodo).
+        var decimals = completed.Count > 0 ? completed.Max(r => r.WeightDecimals) : 0;
         TotalRecords = records.Count.ToString("N0");
-        TotalNetWeight = $"{totalKg:N0} kg";
+        TotalNetWeight = WeightFormat.FormatKg(completed.Sum(r => r.NetWeight), decimals);
         AvgNetWeight = completed.Count > 0
-            ? $"{completed.Average(r => (double)r.NetWeight):N1} kg"
+            ? WeightFormat.FormatKg(completed.Average(r => r.NetWeight), decimals)
             : "0 kg";
 
         var minDate = records.Count > 0 ? records.Min(r => r.WeighInTime.Date) : DateTime.Today.AddDays(-30);
@@ -144,8 +145,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)),
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)),
                 Labeler = value =>
                 {
                     try { return new DateTime((long)value).ToString("dd/MMM"); }
@@ -159,8 +160,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
                 MinLimit = 0,
                 TextSize = 11
             }
@@ -173,8 +174,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
                 MinLimit = 0,
                 TextSize = 11
             }
@@ -183,8 +184,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)),
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)),
                 TextSize = 11,
                 Labeler = value =>
                 {
@@ -201,8 +202,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)) { StrokeThickness = 1, PathEffect = new DashEffect([3, 3]) },
                 MinLimit = 0,
                 TextSize = 11
             }
@@ -211,8 +212,8 @@ public partial class ReportesViewModel : ObservableObject
         [
             new Axis
             {
-                LabelsPaint = new SolidColorPaint(SKColors.LightGray),
-                SeparatorsPaint = new SolidColorPaint(new SKColor(60, 60, 60)),
+                LabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
+                SeparatorsPaint = new SolidColorPaint(new SKColor(0xD1, 0xD5, 0xDB)),
                 TextSize = 11,
                 Labeler = value =>
                 {
@@ -272,9 +273,9 @@ public partial class ReportesViewModel : ObservableObject
                 Stroke = null,
                 Name = "Kilogramos",
                 DataLabelsPosition = DataLabelsPosition.Right,
-                DataLabelsPaint = new SolidColorPaint(SKColors.White),
+                DataLabelsPaint = new SolidColorPaint(new SKColor(0x1F, 0x29, 0x37)),
                 DataLabelsSize = 12,
-                DataLabelsFormatter = point => $"{point.Model:N0} kg"
+                DataLabelsFormatter = point => $"{point.Model:#,##0.###} kg"
             }
         ];
     }
@@ -307,14 +308,14 @@ public partial class ReportesViewModel : ObservableObject
                 _ => kvp.Key.ToString()
             },
             Fill = new SolidColorPaint(colors.GetValueOrDefault(kvp.Key, SKColors.Gray)),
-            Stroke = new SolidColorPaint(new SKColor(37, 37, 38)) { StrokeThickness = 3 },
+            Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 3 },
             DataLabelsPosition = PolarLabelsPosition.Outer,
-            DataLabelsPaint = new SolidColorPaint(SKColors.LightGray),
+            DataLabelsPaint = new SolidColorPaint(new SKColor(0x4B, 0x55, 0x63)),
             DataLabelsSize = 13,
             DataLabelsFormatter = point =>
             {
                 var pct = total > 0 ? (double)point.Model / total * 100 : 0;
-                return $"{point.Model} ({pct:N1}%)";
+                return $"{point.Model} ({pct:N0}%)";
             },
             HoverPushout = 12
         }).ToArray();

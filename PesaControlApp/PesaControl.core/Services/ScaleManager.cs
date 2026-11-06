@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using PesaControl.Core.Models;
 
 namespace PesaControl.Core.Services;
@@ -12,6 +12,8 @@ public class ScaleInstance
     public bool IsStable => Service.IsStable;
     public bool IsConnected => Service.IsConnected;
     public string Name => Config.Name;
+    // Decimales con que se muestran los pesos de esta báscula (fijos o detectados).
+    public int WeightDecimals => Config.WeightDecimals >= 0 ? Config.WeightDecimals : Service.DetectedDecimals;
 
     public ScaleInstance(ScaleConfig config, WeighingService service)
     {
@@ -50,7 +52,7 @@ public class ScaleManager : IDisposable
         foreach (var scale in _scales)
         {
             var port = scale.Config.PortName;
-            var usesSerialPort = scale.Config.ProtocolType is not (ProtocolType.ModbusTcp or ProtocolType.ModbusTcpCfg or ProtocolType.AsciiTcpCfg);
+            var usesSerialPort = scale.Config.ProtocolType is not (ProtocolType.ModbusTcp or ProtocolType.ModbusTcpCfg or ProtocolType.AsciiTcpCfg or ProtocolType.Simulator);
             if (usesSerialPort && !string.IsNullOrEmpty(port) && !usedPorts.Add(port))
             {
                 LogDebug($"WARN", $"Báscula '{scale.Name}' en {port} — puerto ya usado por otra báscula, se omite");
@@ -96,6 +98,7 @@ public class ScaleManager : IDisposable
             instance.Config.SlaveId = updated.SlaveId;
             instance.Config.RegisterAddress = updated.RegisterAddress;
             instance.Config.ReadIntervalMs = updated.ReadIntervalMs;
+            instance.Config.WeightDecimals = updated.WeightDecimals;
             instance.Config.Options = updated.Options;
 
             var newProtocol = CreateProtocol(updated);
@@ -140,6 +143,7 @@ public class ScaleManager : IDisposable
             ProtocolType.ModbusRtu => new ModbusRtuProtocol(),
             ProtocolType.Sensoc => new SensocProtocol(),
             ProtocolType.SensocarA12 => new SensocarA12Protocol(),
+            ProtocolType.Simulator => new SimulatorProtocol(),
             ProtocolType.KronosModbus => new KronosModbusRtuProtocol(),
             _ => new SerialProtocol()
         };

@@ -50,6 +50,7 @@ public class ExchangeWeighing
     // Entrada
     public DateTime WeighInTime { get; set; }
     public decimal GrossWeight { get; set; }
+    public int WeightDecimals { get; set; }
     public string? EntryScaleName { get; set; }
     public string? PhotoFile { get; set; }
 

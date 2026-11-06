@@ -13,12 +13,24 @@ namespace PesaControl
         {
             base.OnStartup(e);
 
+            // Números con punto de miles y coma decimal (36.000), también en los bindings XAML.
+            var culture = new System.Globalization.CultureInfo("es-CL");
+            System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+                new FrameworkPropertyMetadata(System.Windows.Markup.XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
+
             // Sin ventanas abiertas durante la configuración inicial, la app no debe cerrarse sola.
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             try
             {
                 var database = new DatabaseService();
                 await database.InitializeAsync();
+
+                // Modo demostración: solo con una base aparte (PESACONTROL_DB_PATH); crea usuarios y datos ficticios.
+                if (DemoDataSeeder.IsRequested())
+                    await DemoDataSeeder.SeedAsync(database);
 
                 string? createdAdmin = null;
                 if (!await database.HasAdminAsync())

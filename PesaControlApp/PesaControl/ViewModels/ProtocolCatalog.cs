@@ -12,6 +12,7 @@ public static class ProtocolCatalog
         ("Modbus RTU", ProtocolType.ModbusRtu),
         ("Sensoc", ProtocolType.Sensoc),
         ("Sensocar A12", ProtocolType.SensocarA12),
+        ("Simulador", ProtocolType.Simulator),
         ("Kronos Modbus", ProtocolType.KronosModbus),
         ("Modbus RTU (configurable)", ProtocolType.ModbusRtuCfg),
         ("Modbus ASCII (configurable)", ProtocolType.ModbusAsciiCfg),

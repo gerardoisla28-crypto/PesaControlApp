@@ -31,6 +31,7 @@ El archivo de solución es `.slnx` (formato XML de VS2022+, no el `.sln` clásic
 
 - **Intercambio entre puestos**: `WeighingExchangeService` exporta los pesajes elegidos a un zip con `exchange.json`, `manifest.json` (suma de verificación) y fotos, e importa fusionando sin borrar (empareja empresas por RUT y luego por nombre; ante datos distintos conserva el local e informa el conflicto). Pantalla: Registros (casillas, filtros de siempre incluidas las fechas, exportar seleccionados e importar; solo SuperAdmin, Admin y Operator).
 - **Tickets numerados por puesto**: `LocalWeighingDataService.CreateAsync` asigna `CÓDIGO-AAAA-MM-NNNN` en la misma transacción que guarda el pesaje; el código de puesto (`station_code`, 1 a 4 caracteres) se pide al primer arranque y no viaja en los respaldos.
+- **Estado de sincronización**: cada `WeighingRecord` tiene `ModifiedAt`, `SyncStatus` (`Pending`/`Synced`) y `SyncedAt`. `LocalDbContext.SaveChanges` los fija en cada guardado; para marcar `Synced` usar `ExecuteUpdate` (no pasa por `SaveChanges`), con la condición `ModifiedAt == valor subido`.
 - **Pesaje**: `ScaleManager`, `WeighingService` y protocolos `IWeighingProtocol` (Sensocar A12, Sensoc, Modbus RTU/TCP, serial, autodetección).
 - **Acceso**: `IBarrierService` / `ITrafficLightService` con implementaciones Modbus y Arduino (`ArduinoAccessService` en UI).
 - **Tickets**: `ITicketPrinter` con `EscPosPrinter` y `WindowsPrinter`.

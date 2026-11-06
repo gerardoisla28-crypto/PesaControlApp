@@ -8,6 +8,7 @@ public enum ProtocolType
     TcpClient,
     Sensoc,
     SensocarA12,
+    Simulator,
     KronosModbus,
     // Protocolos configurables (la columna guarda el nombre como texto de hasta 15 caracteres).
     ModbusRtuCfg,

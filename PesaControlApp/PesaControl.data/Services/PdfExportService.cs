@@ -98,9 +98,9 @@ public class PdfExportService
                 table.Cell().Element(DataCellStyle).Text(r.Company?.Name ?? "-").FontSize(8);
                 table.Cell().Element(DataCellStyle).Text(r.OperatorName).FontSize(8);
                 table.Cell().Element(DataCellStyle).Text(r.DriverName).FontSize(8);
-                table.Cell().Element(DataCellStyle).Text(r.GrossWeight.ToString("N3")).FontSize(8);
-                table.Cell().Element(DataCellStyle).Text(r.TareWeight.ToString("N3")).FontSize(8);
-                table.Cell().Element(DataCellStyle).Text(r.NetWeight.ToString("N3")).FontSize(8);
+                table.Cell().Element(DataCellStyle).Text(r.GrossWeightText).FontSize(8);
+                table.Cell().Element(DataCellStyle).Text(r.TareWeightText).FontSize(8);
+                table.Cell().Element(DataCellStyle).Text(r.NetWeightText).FontSize(8);
                 table.Cell().Element(DataCellStyle).Text(StatusText(r.Status)).FontSize(8);
             }
         });

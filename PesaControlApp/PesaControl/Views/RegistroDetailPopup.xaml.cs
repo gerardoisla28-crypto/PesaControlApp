@@ -40,9 +40,9 @@ public partial class RegistroDetailPopup : Window
         CompanyName = record.Company?.Name ?? "-";
         OperatorName = string.IsNullOrWhiteSpace(record.OperatorName) ? "-" : record.OperatorName;
         DriverName = string.IsNullOrWhiteSpace(record.DriverName) ? "-" : record.DriverName;
-        GrossWeight = record.GrossWeight.ToString("N3");
-        TareWeight = record.TareWeight.ToString("N3");
-        NetWeight = record.NetWeight.ToString("N3");
+        GrossWeight = record.GrossWeightText;
+        TareWeight = record.TareWeightText;
+        NetWeight = record.NetWeightText;
         EntryDate = record.WeighInTime.ToString("dd/MM/yyyy HH:mm");
         ExitDate = record.WeighOutTime?.ToString("dd/MM/yyyy HH:mm") ?? "Pendiente";
         Notes = string.IsNullOrWhiteSpace(record.Notes) ? "Sin notas" : record.Notes;

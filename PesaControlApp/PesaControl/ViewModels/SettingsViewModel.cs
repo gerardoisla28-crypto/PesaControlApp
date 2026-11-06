@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Text.Json;
 using System.Linq;
@@ -276,6 +276,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             SlaveId = SelectedScale.SlaveId,
             RegisterAddress = SelectedScale.RegisterAddress,
             ReadIntervalMs = SelectedScale.ReadIntervalMs,
+            WeightDecimals = SelectedScale.WeightDecimals,
             Options = SelectedScale.Options?.Clone() ?? new ProtocolOptions()
         };
         SelectedProtocolName = ProtocolCatalog.NameOf(SelectedScale.ProtocolType);
@@ -384,6 +385,11 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     [ObservableProperty] private int _modbusRegister;
     [ObservableProperty] private int _readIntervalMs = 200;
 
+    public record WeightDecimalOption(int Value, string Label);
+    public WeightDecimalOption[] WeightDecimalOptions { get; } =
+    [
+        new(-1, "Automático"), new(0, "0 (sin decimales)"), new(1, "1 decimal"), new(2, "2 decimales"), new(3, "3 decimales")
+    ];
     public int[] BaudRates { get; } = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200];
     public int[] ParityOptions { get; } = [0, 1, 2];
     public int[] DataBitsOptions { get; } = [5, 6, 7, 8];

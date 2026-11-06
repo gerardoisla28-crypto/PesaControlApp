@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -56,16 +56,18 @@ public partial class WeighingViewModel : ObservableObject
 
         var entryScale = ScaleDisplays.FirstOrDefault(d => d.Name == EntryScaleName);
         if (entryScale != null)
-            EntryWeightText = $"{entryScale.Weight:F1} kg";
+            EntryWeightText = WeightFormat.FormatKg(entryScale.Weight, DecimalsOf(entryScale.Id));
 
         var exitScale = ScaleDisplays.FirstOrDefault(d => d.Name == ExitScaleName);
         if (exitScale != null)
-            ExitWeightText = $"{exitScale.Weight:F1} kg";
+            ExitWeightText = WeightFormat.FormatKg(exitScale.Weight, DecimalsOf(exitScale.Id));
 
         OnPropertyChanged(nameof(IsMultiScale));
     }
 
     /// <summary>Se llama al agregar, editar o eliminar una báscula: ajusta los recuadros de la pantalla principal.</summary>
+    private int DecimalsOf(int scaleId) => _scaleManager.GetById(scaleId)?.WeightDecimals ?? 0;
+
     public void RefreshScaleNames() => SyncScaleDisplays();
 
     // Id 0 = recuadro de reserva: la pantalla principal nunca queda sin recuadro de peso.
@@ -95,6 +97,7 @@ public partial class WeighingViewModel : ObservableObject
                 {
                     ScaleDisplays.Add(new ScaleDisplay(scale.Config.Id, scale.Name)
                     {
+                        Decimals = scale.WeightDecimals,
                         Weight = scale.CurrentWeight,
                         IsStable = scale.IsStable,
                         IsConnected = scale.IsConnected,
@@ -130,8 +133,8 @@ public partial class WeighingViewModel : ObservableObject
 
     // ── Captured weights (solo lectura, se llenan al pesar) ──
 
-    [ObservableProperty] private string _entryWeightText = "0.0 kg";
-    [ObservableProperty] private string _exitWeightText = "0.0 kg";
+    [ObservableProperty] private string _entryWeightText = "0 kg";
+    [ObservableProperty] private string _exitWeightText = "0 kg";
 
     private bool _exitCaptured;
 
@@ -142,7 +145,7 @@ public partial class WeighingViewModel : ObservableObject
 
     // ── Status display ─────────────────────────────────────
 
-    [ObservableProperty] private string _weightDisplay = "0.0kg";
+    [ObservableProperty] private string _weightDisplay = "0kg";
     [ObservableProperty] private string _connectionStatus = "Desconectado";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isStable;
@@ -191,19 +194,22 @@ public partial class WeighingViewModel : ObservableObject
         {
             var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
             if (display != null)
+            {
+                display.Decimals = scale.WeightDecimals;
                 display.Weight = scale.CurrentWeight;
+            }
 
-            WeightDisplay = $"{scale.CurrentWeight:F1}kg";
+            WeightDisplay = WeightFormat.Format(scale.CurrentWeight, scale.WeightDecimals) + "kg";
             IsReading = true;
             LastReadingTime = DateTime.Now.ToString("HH:mm:ss.fff");
             IsConnected = _scaleManager.Scales.Any(s => s.IsConnected);
             ConnectionStatus = IsConnected ? "Conectado" : "Desconectado";
 
             if (!IsWeighingIn && scale.Name == EntryScaleName)
-                EntryWeightText = $"{scale.CurrentWeight:F1} kg";
+                EntryWeightText = WeightFormat.FormatKg(scale.CurrentWeight, scale.WeightDecimals);
 
             if (!_exitCaptured && scale.Name == ExitScaleName)
-                ExitWeightText = $"{scale.CurrentWeight:F1} kg";
+                ExitWeightText = WeightFormat.FormatKg(scale.CurrentWeight, scale.WeightDecimals);
         });
     }
 
@@ -318,9 +324,9 @@ public partial class WeighingViewModel : ObservableObject
         SelectedCompany = Companies.FirstOrDefault(c => c.Id == value.CompanyId);
         _currentRecord = value.Status == WeighingStatus.WeighingIn ? value : null;
         IsWeighingIn = value.Status == WeighingStatus.WeighingIn;
-        EntryWeightText = $"{value.GrossWeight:F1} kg";
+        EntryWeightText = WeightFormat.FormatKg(value.GrossWeight, value.WeightDecimals);
         if (value.TareWeight > 0)
-            ExitWeightText = $"{value.TareWeight:F1} kg";
+            ExitWeightText = WeightFormat.FormatKg(value.TareWeight, value.WeightDecimals);
         StatusMessage = $"Cargado: {value.TicketNumber} - {value.LicensePlate}";
     }
 
@@ -407,7 +413,7 @@ public partial class WeighingViewModel : ObservableObject
         _exitCaptured = false;
         var currentExitScale = _scaleManager.GetByName(ExitScaleName);
         if (currentExitScale != null)
-            ExitWeightText = $"{currentExitScale.CurrentWeight:F1} kg";
+            ExitWeightText = WeightFormat.FormatKg(currentExitScale.CurrentWeight, currentExitScale.WeightDecimals);
 
         if (grossWeight == 0)
         {
@@ -425,12 +431,13 @@ public partial class WeighingViewModel : ObservableObject
             CompanyId = SelectedCompany?.Id,
             Status = WeighingStatus.WeighingIn,
             GrossWeight = grossWeight,
+            WeightDecimals = scale.WeightDecimals,
             EntryScaleName = EntryScaleName
         };
 
         _currentRecord = await _dataService.CreateAsync(_currentRecord);
 
-        EntryWeightText = $"{grossWeight:F1} kg";
+        EntryWeightText = WeightFormat.FormatKg(grossWeight, scale.WeightDecimals);
         IsWeighingIn = true;
         StatusMessage = $"Pesada de entrada: {_currentRecord.TicketNumber}";
         await LoadActiveWeighingsAsync();
@@ -474,6 +481,7 @@ public partial class WeighingViewModel : ObservableObject
 
             record.WeighOutTime = DateTime.Now;
             record.TareWeight = tareWeight;
+            record.WeightDecimals = Math.Max(record.WeightDecimals, scale.WeightDecimals);
             record.ExitScaleName = ExitScaleName;
             record.IsExitWeightManual = false;
             record.NetWeight = Math.Abs(record.GrossWeight - record.TareWeight);
@@ -481,7 +489,7 @@ public partial class WeighingViewModel : ObservableObject
 
             await _dataService.UpdateAsync(record);
 
-            ExitWeightText = $"{tareWeight:F1} kg";
+            ExitWeightText = WeightFormat.FormatKg(tareWeight, scale.WeightDecimals);
             _exitCaptured = true;
             _lastCompletedRecord = record;
 
@@ -552,6 +560,7 @@ public partial class WeighingViewModel : ObservableObject
                 DriverName = string.IsNullOrWhiteSpace(DriverName) ? "---" : DriverName.Trim(),
                 Product = SelectedProduct,
                 Company = SelectedCompany,
+                WeightDecimals = _currentRecord?.WeightDecimals ?? 0,
                 GrossWeight = _currentRecord?.GrossWeight ?? 0,
                 TareWeight = _currentRecord?.TareWeight ?? 0,
                 NetWeight = Math.Abs((_currentRecord?.GrossWeight ?? 0) - (_currentRecord?.TareWeight ?? 0)),
@@ -589,8 +598,8 @@ public partial class WeighingViewModel : ObservableObject
         var entryScale = _scaleManager.GetByName(EntryScaleName);
         var exitScale = _scaleManager.GetByName(ExitScaleName);
 
-        EntryWeightText = entryScale != null ? $"{entryScale.CurrentWeight:F1} kg" : "0.0 kg";
-        ExitWeightText = exitScale != null ? $"{exitScale.CurrentWeight:F1} kg" : "0.0 kg";
+        EntryWeightText = entryScale != null ? WeightFormat.FormatKg(entryScale.CurrentWeight, entryScale.WeightDecimals) : "0 kg";
+        ExitWeightText = exitScale != null ? WeightFormat.FormatKg(exitScale.CurrentWeight, exitScale.WeightDecimals) : "0 kg";
 
         StatusMessage = "Listo";
     }

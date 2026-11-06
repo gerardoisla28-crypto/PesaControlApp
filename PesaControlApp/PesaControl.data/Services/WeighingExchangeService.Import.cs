@@ -237,6 +237,7 @@ public partial class WeighingExchangeService
             Status = i.Status,
             WeighInTime = i.WeighInTime,
             GrossWeight = i.GrossWeight,
+            WeightDecimals = i.WeightDecimals,
             EntryScaleName = i.EntryScaleName,
             PhotoPath = CopyPhoto(zip, i.PhotoFile, result),
             WeighOutTime = i.WeighOutTime,
@@ -292,6 +293,7 @@ public partial class WeighingExchangeService
             if (localEntryEmpty)
             {
                 local.WeighInTime = i.WeighInTime; local.GrossWeight = i.GrossWeight; local.EntryScaleName = i.EntryScaleName;
+                local.WeightDecimals = Math.Max(local.WeightDecimals, i.WeightDecimals);
                 changed = true;
             }
             else
@@ -314,6 +316,7 @@ public partial class WeighingExchangeService
             {
                 local.WeighOutTime = i.WeighOutTime; local.TareWeight = i.TareWeight; local.NetWeight = i.NetWeight;
                 local.ExitScaleName = i.ExitScaleName; local.IsExitWeightManual = i.IsExitWeightManual;
+                local.WeightDecimals = Math.Max(local.WeightDecimals, i.WeightDecimals);
                 changed = true;
             }
             else
