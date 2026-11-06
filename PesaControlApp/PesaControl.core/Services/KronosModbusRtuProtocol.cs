@@ -96,8 +96,11 @@ public class KronosModbusRtuProtocol : IWeighingProtocol, IDisposable
                 if (reading is null)
                 {
                     if (++_consecutiveFailures == ErrorReportThreshold)
-                        ErrorOccurred?.Invoke(this,
-                            $"Kronos sin respuesta en {_config?.PortName} (esclavo {_config?.SlaveId}, {_config?.BaudRate} baud). Verifique PROTOC=MOD.RTU, número de esclavo y que ningún otro programa use el puerto.");
+                    {
+                        var msg = $"Kronos sin respuesta en {_config?.PortName} (esclavo {_config?.SlaveId}, {_config?.BaudRate} baud). Verifique PROTOC=MOD.RTU, número de esclavo (Slave ID) y que ningún otro programa use el puerto.";
+                        Log(msg);
+                        ErrorOccurred?.Invoke(this, msg);
+                    }
                     continue;
                 }
 
