@@ -78,6 +78,12 @@ public partial class DashboardWindow : Window
         DataContext = _dashboardVm;
         Closing += OnWindowClosing;
 
+        // Al cerrar se sueltan los puertos y se detienen las lecturas. Se hace en otro hilo para no bloquear la ventana.
+        Closed += (_, _) => _ = Task.Run(async () =>
+        {
+            try { await _scaleManager.DisconnectAllAsync(); } catch { }
+        });
+
         _ = InitializeCameraAsync(dbService, weighingVm, controlsVm, anprService, dvrService);
         _ = _dashboardVm.LoadModuleConfigAsync(dbService);
     }
@@ -113,7 +119,9 @@ public partial class DashboardWindow : Window
     {
         var ctx = dbService.CreateContext();
         var repo = new Repository<ScaleConfig>(ctx);
-        return (await repo.GetAllAsync()).Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList();
+        var scales = (await repo.GetAllAsync()).Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList();
+        await dbService.LoadScaleOptionsAsync(scales);
+        return scales;
     }
 
     private static void TryWireSharedArduinoService(DatabaseService dbService, BarrierViewModel barrierVm, TrafficLightViewModel trafficLightVm)

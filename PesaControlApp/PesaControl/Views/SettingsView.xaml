@@ -19,7 +19,8 @@
                     SelectionChanged="SettingsTabs_SelectionChanged">
             <!-- TAB: Básculas -->
             <TabItem Header="Básculas">
-                <Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid Margin="0,0,15,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
@@ -90,7 +91,12 @@
                             <CheckBox IsChecked="{Binding EditingScale.IsActive}" Content="Activa"
                                       Margin="0,0,0,8" />
 
-                            <Label Content="Protocolo" Style="{StaticResource FormLabel}" />
+                            <Label Content="Seleccionar protocolo de comunicación" Style="{StaticResource FormLabel}" />
+                            <ComboBox ItemsSource="{Binding ProfileNames}"
+                                      SelectedItem="{Binding SelectedProfileName}"
+                                      Margin="0,0,0,8" />
+
+                            <Label Content="Tipo de protocolo (ajuste manual)" Style="{StaticResource FormLabel}" />
                             <ComboBox ItemsSource="{Binding ProtocolNames}"
                                       SelectedItem="{Binding SelectedProtocolName}"
                                       Margin="0,0,0,8" />
@@ -194,7 +200,132 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Parámetros Modbus configurables (RTU / ASCII / TCP) -->
+                            <Border Background="{StaticResource SurfaceDarkBrush}"
+                                    CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                    Visibility="{Binding IsModbusCfg, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Mapa de registros Modbus" FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2" />
+                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Text="La dirección de inicio es el campo «Registro» (dirección = registro − 30001 / 40001). Peso = valor leído ÷ divisor." />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Función (3 = mantenidos, 4 = entrada)" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding ModbusFunctions}" SelectedItem="{Binding EditingScale.Options.Function}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Tipo de dato" Style="{StaticResource FormLabel}" />
+                                            <ComboBox ItemsSource="{Binding ModbusDataTypes}" SelectedItem="{Binding EditingScale.Options.DataType}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                            <Label Content="Divisor" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.Divisor}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <WrapPanel Margin="0,6,0,0">
+                                        <CheckBox Content="32 bits: registro bajo primero" IsChecked="{Binding EditingScale.Options.LowWordFirst}" Margin="0,0,16,0" />
+                                        <CheckBox Content="Intercambiar bytes de cada registro" IsChecked="{Binding EditingScale.Options.SwapBytes}" />
+                                    </WrapPanel>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Reg. de estado (-1 = no usar)" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.StatusRegister}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Bit de estabilidad" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.StableBit}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="6,0,0,0" VerticalAlignment="Bottom">
+                                            <CheckBox Content="Estable si el bit vale 1" IsChecked="{Binding EditingScale.Options.StableWhenSet}" Margin="0,0,0,6" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Reg. de comando (-1 = sin tara/cero)" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.CommandRegister}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Valor para tara" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.TareValue}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                            <Label Content="Valor para cero" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.ZeroValue}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Parámetros ASCII configurables (serie/USB y Ethernet) -->
+                            <Border Background="{StaticResource SurfaceDarkBrush}"
+                                    CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                    Visibility="{Binding IsAsciiCfg, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Formato de trama ASCII" FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2" />
+                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Text="Use \r (CR), \n (LF) y \t para los caracteres especiales. El patrón es una expresión regular; el peso es el primer valor que coincida." />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Fin de trama" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.Terminator}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="3,0">
+                                            <Label Content="Comando de consulta (vacío = transmite solo)" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.PollCommand}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                            <Label Content="Divisor" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.Divisor}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Label Content="Patrón del peso" Style="{StaticResource FormLabel}" Margin="0,6,0,0" />
+                                    <TextBox Text="{Binding EditingScale.Options.WeightPattern}" />
+                                    <Label Content="Patrón de peso inestable (opcional, p. ej. US|MOT)" Style="{StaticResource FormLabel}" Margin="0,6,0,0" />
+                                    <TextBox Text="{Binding EditingScale.Options.UnstablePattern}" />
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <Label Content="Comando de tara (opcional)" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.TareCommand}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                            <Label Content="Comando de cero (opcional)" Style="{StaticResource FormLabel}" />
+                                            <TextBox Text="{Binding EditingScale.Options.ZeroCommand}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
                             <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
+                                <Button Content="Detectar equipo" Command="{Binding DetectEquipmentCommand}"
+                                        Style="{StaticResource WarningButton}" Margin="0,0,8,0" />
                                 <Button Content="Probar Conexión" Command="{Binding TestConnectionCommand}"
                                         Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
                                 <Button Content="Guardar" Command="{Binding SaveScaleCommand}"
@@ -205,6 +336,7 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <!-- TAB: Puesto -->
