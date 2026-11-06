@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using PesaControl.Core.Models;
 
 namespace PesaControl.Core.Services;
@@ -52,7 +52,8 @@ public class ScaleManager : IDisposable
         foreach (var scale in _scales)
         {
             var port = scale.Config.PortName;
-            if (!string.IsNullOrEmpty(port) && !usedPorts.Add(port))
+            var usesSerialPort = scale.Config.ProtocolType is not (ProtocolType.ModbusTcp or ProtocolType.ModbusTcpCfg or ProtocolType.AsciiTcpCfg or ProtocolType.Simulator);
+            if (usesSerialPort && !string.IsNullOrEmpty(port) && !usedPorts.Add(port))
             {
                 LogDebug($"WARN", $"Báscula '{scale.Name}' en {port} — puerto ya usado por otra báscula, se omite");
                 continue;
@@ -98,10 +99,22 @@ public class ScaleManager : IDisposable
             instance.Config.RegisterAddress = updated.RegisterAddress;
             instance.Config.ReadIntervalMs = updated.ReadIntervalMs;
             instance.Config.WeightDecimals = updated.WeightDecimals;
+            instance.Config.Options = updated.Options;
 
             var newProtocol = CreateProtocol(updated);
             await instance.Service.SetProtocol(newProtocol, updated.ToCommunicationConfig());
         }
+    }
+
+    /// <summary>Quita una báscula: la desconecta, libera su protocolo y la saca del gestor.</summary>
+    public async Task RemoveScaleAsync(int id)
+    {
+        var instance = _scales.FirstOrDefault(s => s.Config.Id == id);
+        if (instance is null) return;
+
+        _scales.Remove(instance);
+        try { await instance.Service.DisconnectAsync(); } catch { }
+        (instance.Service.Protocol as IDisposable)?.Dispose();
     }
 
     public async Task AddScaleAsync(ScaleConfig config)
@@ -117,15 +130,21 @@ public class ScaleManager : IDisposable
     public ScaleInstance? FirstOrDefault =>
         _scales.FirstOrDefault();
 
-    private static IWeighingProtocol CreateProtocol(ScaleConfig config)
+    public static IWeighingProtocol CreateProtocol(ScaleConfig config)
     {
         return config.ProtocolType switch
         {
+            ProtocolType.ModbusRtuCfg => new ConfigurableModbusProtocol(ModbusTransport.Rtu),
+            ProtocolType.ModbusAsciiCfg => new ConfigurableModbusProtocol(ModbusTransport.Ascii),
+            ProtocolType.ModbusTcpCfg => new ConfigurableModbusProtocol(ModbusTransport.Tcp),
+            ProtocolType.AsciiCfg => new ConfigurableAsciiProtocol(tcp: false),
+            ProtocolType.AsciiTcpCfg => new ConfigurableAsciiProtocol(tcp: true),
             ProtocolType.ModbusTcp => new ModbusTcpProtocol(),
             ProtocolType.ModbusRtu => new ModbusRtuProtocol(),
             ProtocolType.Sensoc => new SensocProtocol(),
             ProtocolType.SensocarA12 => new SensocarA12Protocol(),
             ProtocolType.Simulator => new SimulatorProtocol(),
+            ProtocolType.KronosModbus => new KronosModbusRtuProtocol(),
             _ => new SerialProtocol()
         };
     }

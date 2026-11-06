@@ -8,7 +8,14 @@ public enum ProtocolType
     TcpClient,
     Sensoc,
     SensocarA12,
-    Simulator
+    Simulator,
+    KronosModbus,
+    // Protocolos configurables (la columna guarda el nombre como texto de hasta 15 caracteres).
+    ModbusRtuCfg,
+    ModbusAsciiCfg,
+    ModbusTcpCfg,
+    AsciiCfg,
+    AsciiTcpCfg
 }
 
 public class CommunicationConfig
@@ -27,4 +34,7 @@ public class CommunicationConfig
     public byte SlaveId { get; set; } = 1;
     public ushort RegisterAddress { get; set; } = 0;
     public int ReadIntervalMs { get; set; } = 200;
+
+    /// <summary>Parámetros de los protocolos configurables; null en los protocolos fijos.</summary>
+    public ProtocolOptions? Options { get; set; }
 }

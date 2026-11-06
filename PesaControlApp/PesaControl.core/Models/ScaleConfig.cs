@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace PesaControl.Core.Models;
 
 public class ScaleConfig
@@ -23,6 +25,12 @@ public class ScaleConfig
 
     // Decimales que muestra el visor de esta báscula: -1 = automático (se detectan del texto ASCII), 0 a 3 = fijo; los pesos se muestran igual en toda la app.
     public int WeightDecimals { get; set; } = -1;
+    /// <summary>
+    /// Parámetros de los protocolos configurables. No es una columna: se guarda como JSON en SystemConfigs
+    /// (clave scale_options_{Id}) para no cambiar el esquema de la base de datos.
+    /// </summary>
+    [NotMapped]
+    public ProtocolOptions? Options { get; set; }
 
     public CommunicationConfig ToCommunicationConfig() => new()
     {
@@ -36,6 +44,7 @@ public class ScaleConfig
         TcpPort = TcpPort,
         SlaveId = SlaveId,
         RegisterAddress = RegisterAddress,
-        ReadIntervalMs = ReadIntervalMs
+        ReadIntervalMs = ReadIntervalMs,
+        Options = Options
     };
 }

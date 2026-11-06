@@ -60,6 +60,60 @@ public class DatabaseService
         await context.SaveChangesAsync();
     }
 
+    // ── Opciones de protocolos configurables ──────────────
+    // Se guardan como JSON en SystemConfigs (sin tocar el esquema): clave scale_options_{Id de báscula}.
+
+    private const string ScaleOptionsKeyPrefix = "scale_options_";
+    private const int MaxConfigValueLength = 500;
+
+    public async Task LoadScaleOptionsAsync(IEnumerable<ScaleConfig> scales)
+    {
+        var list = scales.ToList();
+        if (list.Count == 0) return;
+
+        var keys = list.Select(s => ScaleOptionsKeyPrefix + s.Id).ToList();
+        await using var context = CreateContext();
+        var rows = await context.SystemConfigs.Where(c => keys.Contains(c.Key)).ToListAsync();
+        var byKey = rows.ToDictionary(r => r.Key, r => r.Value);
+
+        foreach (var scale in list)
+            scale.Options = byKey.TryGetValue(ScaleOptionsKeyPrefix + scale.Id, out var json)
+                ? ProtocolOptions.FromJson(json)
+                : null;
+    }
+
+    public async Task SaveScaleOptionsAsync(ScaleConfig scale)
+    {
+        var key = ScaleOptionsKeyPrefix + scale.Id;
+        await using var context = CreateContext();
+        var row = await context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == key);
+
+        if (scale.Options is null)
+        {
+            if (row is not null) context.SystemConfigs.Remove(row);
+        }
+        else
+        {
+            var json = scale.Options.ToJson();
+            if (json.Length > MaxConfigValueLength)
+                throw new InvalidOperationException($"Los parámetros del protocolo son demasiado largos ({json.Length} de {MaxConfigValueLength} caracteres). Acorte los patrones o comandos.");
+
+            if (row is null) context.SystemConfigs.Add(new SystemConfig { Key = key, Value = json });
+            else row.Value = json;
+        }
+        await context.SaveChangesAsync();
+    }
+
+    public async Task DeleteScaleOptionsAsync(int scaleId)
+    {
+        var key = ScaleOptionsKeyPrefix + scaleId;
+        await using var context = CreateContext();
+        var row = await context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == key);
+        if (row is null) return;
+        context.SystemConfigs.Remove(row);
+        await context.SaveChangesAsync();
+    }
+
     public async Task<bool> HasAdminAsync()
     {
         await using var context = CreateContext();

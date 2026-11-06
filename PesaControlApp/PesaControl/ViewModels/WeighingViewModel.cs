@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -52,29 +52,7 @@ public partial class WeighingViewModel : ObservableObject
 
     private async Task InitializeScalesAsync()
     {
-        foreach (var scale in _scaleManager.Scales)
-        {
-            var display = new ScaleDisplay(scale.Config.Id, scale.Name)
-            {
-                Decimals = scale.WeightDecimals,
-                Weight = scale.CurrentWeight,
-                IsStable = scale.IsStable,
-                IsConnected = scale.IsConnected,
-                StatusText = scale.IsConnected ? "Conectado" : "Desconectado"
-            };
-            ScaleDisplays.Add(display);
-            AvailableScaleNames.Add(scale.Name);
-        }
-
-        if (AvailableScaleNames.Count > 0)
-        {
-            EntryScaleName = AvailableScaleNames[0];
-            ExitScaleName = AvailableScaleNames[0];
-        }
-        if (AvailableScaleNames.Count > 1)
-        {
-            ExitScaleName = AvailableScaleNames[1];
-        }
+        SyncScaleDisplays();
 
         var entryScale = ScaleDisplays.FirstOrDefault(d => d.Name == EntryScaleName);
         if (entryScale != null)
@@ -87,19 +65,70 @@ public partial class WeighingViewModel : ObservableObject
         OnPropertyChanged(nameof(IsMultiScale));
     }
 
+    /// <summary>Se llama al agregar, editar o eliminar una báscula: ajusta los recuadros de la pantalla principal.</summary>
     private int DecimalsOf(int scaleId) => _scaleManager.GetById(scaleId)?.WeightDecimals ?? 0;
 
-    public void RefreshScaleNames()
+    public void RefreshScaleNames() => SyncScaleDisplays();
+
+    // Id 0 = recuadro de reserva: la pantalla principal nunca queda sin recuadro de peso.
+    private const int PlaceholderScaleId = 0;
+
+    private void SyncScaleDisplays()
     {
-        foreach (var scale in _scaleManager.Scales)
+        RunOnUi(() =>
         {
-            var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
-            if (display != null)
-                display.Name = scale.Config.Name;
-        }
-        AvailableScaleNames.Clear();
-        foreach (var s in _scaleManager.Scales)
-            AvailableScaleNames.Add(s.Name);
+            var scales = _scaleManager.Scales;
+
+            // Quitar los recuadros de básculas que ya no existen, y el de reserva si ya hay básculas reales.
+            foreach (var d in ScaleDisplays.ToList())
+            {
+                var obsolete = d.Id == PlaceholderScaleId
+                    ? scales.Count > 0
+                    : !scales.Any(s => s.Config.Id == d.Id);
+                if (obsolete)
+                    ScaleDisplays.Remove(d);
+            }
+
+            // Agregar los nuevos y refrescar el nombre de los existentes.
+            foreach (var scale in scales)
+            {
+                var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
+                if (display is null)
+                {
+                    ScaleDisplays.Add(new ScaleDisplay(scale.Config.Id, scale.Name)
+                    {
+                        Decimals = scale.WeightDecimals,
+                        Weight = scale.CurrentWeight,
+                        IsStable = scale.IsStable,
+                        IsConnected = scale.IsConnected,
+                        StatusText = scale.IsConnected ? "Conectado" : "Desconectado"
+                    });
+                }
+                else
+                {
+                    display.Name = scale.Config.Name;
+                }
+            }
+
+            if (ScaleDisplays.Count == 0)
+                ScaleDisplays.Add(new ScaleDisplay(PlaceholderScaleId, "Báscula 1"));
+
+            // Solo se reconstruye la lista de nombres si cambió, para no perder la selección de entrada/salida.
+            var names = scales.Select(s => s.Name).ToList();
+            if (!AvailableScaleNames.SequenceEqual(names))
+            {
+                AvailableScaleNames.Clear();
+                foreach (var name in names)
+                    AvailableScaleNames.Add(name);
+            }
+
+            if (!AvailableScaleNames.Contains(EntryScaleName))
+                EntryScaleName = AvailableScaleNames.FirstOrDefault() ?? "";
+            if (!AvailableScaleNames.Contains(ExitScaleName))
+                ExitScaleName = AvailableScaleNames.Count > 1 ? AvailableScaleNames[1] : AvailableScaleNames.FirstOrDefault() ?? "";
+
+            OnPropertyChanged(nameof(IsMultiScale));
+        });
     }
 
     // ── Captured weights (solo lectura, se llenan al pesar) ──
@@ -122,6 +151,19 @@ public partial class WeighingViewModel : ObservableObject
     [ObservableProperty] private bool _isStable;
     [ObservableProperty] private string _statusMessage = "Listo";
     [ObservableProperty] private bool _isWeighingIn;
+
+    // Los pesos llegan desde el hilo del puerto serie, que puede seguir activo mientras la app se cierra:
+    // si ya no hay aplicación o está cerrándose, se ignora el evento en vez de fallar con un puntero nulo.
+    private static void RunOnUi(Action action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted) return;
+
+        if (dispatcher.CheckAccess())
+            action();
+        else
+            dispatcher.Invoke(action);
+    }
 
     // ── Scale events ──────────────────────────────────────
 
@@ -148,7 +190,7 @@ public partial class WeighingViewModel : ObservableObject
 
     private void OnScaleWeightUpdated(ScaleInstance scale)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
             if (display != null)
@@ -173,7 +215,7 @@ public partial class WeighingViewModel : ObservableObject
 
     private void OnScaleStabilityChanged(ScaleInstance scale, bool stable)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
             if (display != null)
@@ -184,7 +226,7 @@ public partial class WeighingViewModel : ObservableObject
 
     private void OnScaleConnectionChanged(ScaleInstance scale, bool connected)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             var display = ScaleDisplays.FirstOrDefault(d => d.Id == scale.Config.Id);
             if (display != null)
@@ -202,7 +244,7 @@ public partial class WeighingViewModel : ObservableObject
 
     private void OnScaleError(ScaleInstance scale, string error)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             StatusMessage = $"{scale.Name}: {error}";
         });
@@ -619,14 +661,14 @@ public partial class WeighingViewModel : ObservableObject
     private async Task LoadCatalogsAsync()
     {
         var products = await _dataService.GetProductsAsync();
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             Products.Clear();
             foreach (var p in products) Products.Add(p);
         });
 
         var companies = await _dataService.GetCompaniesAsync();
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             Companies.Clear();
             foreach (var c in companies) Companies.Add(c);
@@ -636,7 +678,7 @@ public partial class WeighingViewModel : ObservableObject
     private async Task LoadOperatorsAsync()
     {
         var items = await _dataService.GetOperatorsAsync();
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             AllOperators.Clear();
             foreach (var o in items) AllOperators.Add(o);
@@ -647,7 +689,7 @@ public partial class WeighingViewModel : ObservableObject
     private async Task LoadDriversAsync()
     {
         var items = await _dataService.GetDriversAsync();
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             AllDrivers.Clear();
             foreach (var d in items) AllDrivers.Add(d);
@@ -658,7 +700,7 @@ public partial class WeighingViewModel : ObservableObject
     private async Task LoadActiveWeighingsAsync()
     {
         var records = await _dataService.GetTodayAsync();
-        App.Current.Dispatcher.Invoke(() =>
+        RunOnUi(() =>
         {
             ActiveWeighings.Clear();
             foreach (var w in records) ActiveWeighings.Add(w);

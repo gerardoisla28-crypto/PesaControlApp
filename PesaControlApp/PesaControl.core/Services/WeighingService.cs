@@ -35,10 +35,11 @@ public class WeighingService
     public async Task SetProtocol(IWeighingProtocol protocol, CommunicationConfig config)
     {
         var oldProtocol = _protocol;
+        var wasConnected = oldProtocol.IsConnected;
 
         UnwireEvents();
 
-        if (oldProtocol.IsConnected)
+        if (wasConnected)
             await oldProtocol.DisconnectAsync();
 
         (oldProtocol as IDisposable)?.Dispose();
@@ -47,6 +48,10 @@ public class WeighingService
         DetectedDecimals = 0;
         _config = config;
         WireEvents();
+
+        // Si estaba conectada, reconectar con la nueva configuración para no quedar en 0 hasta pulsar Conectar.
+        if (wasConnected)
+            await ConnectAsync();
     }
 
     public async Task ConnectAsync() => await _protocol.ConnectAsync(_config);

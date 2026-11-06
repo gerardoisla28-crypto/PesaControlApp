@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Text.Json;
 using System.Linq;
@@ -216,23 +216,30 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         var ctx = _db.CreateContext();
         var repo = new Repository<ScaleConfig>(ctx);
         var items = await repo.GetAllAsync();
+        await _db.LoadScaleOptionsAsync(items);
 
         App.Current.Dispatcher.Invoke(() =>
         {
+            // Recargar la lista vacía la selección: se restaura para que Editar/Eliminar sigan funcionando.
+            var selectedId = SelectedScale?.Id;
             ScaleConfigs.Clear();
             foreach (var s in items.OrderBy(x => x.SortOrder))
                 ScaleConfigs.Add(s);
+            SelectedScale = ScaleConfigs.FirstOrDefault(s => s.Id == selectedId);
         });
     }
 
     [RelayCommand]
     private void AddScale()
     {
+        SelectedProfileName = null;
         EditingScale = new ScaleConfig
         {
             Name = $"Báscula {ScaleConfigs.Count + 1}",
             IsActive = true,
-            SortOrder = ScaleConfigs.Count
+            SortOrder = ScaleConfigs.Count,
+            // Siempre hay opciones durante la edición para que los campos avanzados puedan enlazarse.
+            Options = new ProtocolOptions()
         };
         SelectedProtocolName = "Serial";
         _scaleSnapshot = SnapshotScale();
@@ -242,7 +249,16 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     [RelayCommand]
     private void EditScale()
     {
-        if (SelectedScale is null) return;
+        if (SelectedScale is null && ScaleConfigs.Count == 1)
+            SelectedScale = ScaleConfigs[0];
+
+        if (SelectedScale is null)
+        {
+            ScaleStatusMessage = "Seleccione una báscula de la lista para editarla.";
+            return;
+        }
+
+        SelectedProfileName = null;
         EditingScale = new ScaleConfig
         {
             Id = SelectedScale.Id,
@@ -260,17 +276,10 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             SlaveId = SelectedScale.SlaveId,
             RegisterAddress = SelectedScale.RegisterAddress,
             ReadIntervalMs = SelectedScale.ReadIntervalMs,
-            WeightDecimals = SelectedScale.WeightDecimals
+            WeightDecimals = SelectedScale.WeightDecimals,
+            Options = SelectedScale.Options?.Clone() ?? new ProtocolOptions()
         };
-        SelectedProtocolName = SelectedScale.ProtocolType switch
-        {
-            ProtocolType.ModbusTcp => "Modbus TCP",
-            ProtocolType.ModbusRtu => "Modbus RTU",
-            ProtocolType.Sensoc => "Sensoc",
-            ProtocolType.SensocarA12 => "Sensocar A12",
-            ProtocolType.Simulator => "Simulador",
-            _ => "Serial"
-        };
+        SelectedProtocolName = ProtocolCatalog.NameOf(SelectedScale.ProtocolType);
         _scaleSnapshot = SnapshotScale();
         IsScaleEditorOpen = true;
     }
@@ -281,10 +290,23 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         if (EditingScale is null) return;
 
         var saved = EditingScale;
+
+        // Solo los protocolos configurables usan opciones; en los demás no se guardan.
+        if (!ProtocolCatalog.IsConfigurable(saved.ProtocolType))
+            saved.Options = null;
+        else if (saved.Options is { } opts && opts.ToJson().Length > 500)
+        {
+            ScaleStatusMessage = "Los parámetros del protocolo son demasiado largos (máx. 500 caracteres). Acorte los patrones o comandos.";
+            return;
+        }
+
         var ctx = _db.CreateContext();
         var repo = new Repository<ScaleConfig>(ctx);
 
-        if (saved.Id == 0)
+        // El Id se asigna al guardar: hay que recordar ahora si es nueva, no preguntarlo después.
+        var isNew = saved.Id == 0;
+
+        if (isNew)
         {
             await repo.AddAsync(saved);
         }
@@ -292,6 +314,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         {
             await repo.UpdateAsync(saved);
         }
+        await _db.SaveScaleOptionsAsync(saved);
 
         IsScaleEditorOpen = false;
         EditingScale = null;
@@ -299,7 +322,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 
         if (_scaleManager != null)
         {
-            if (saved.Id == 0)
+            if (isNew)
                 await _scaleManager.AddScaleAsync(saved);
             else
                 await _scaleManager.UpdateScaleConfigAsync(saved);
@@ -319,11 +342,23 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     [RelayCommand]
     private async Task DeleteScaleAsync()
     {
-        if (SelectedScale is null) return;
+        if (SelectedScale is null)
+        {
+            ScaleStatusMessage = "Seleccione una báscula de la lista para eliminarla.";
+            return;
+        }
         var ctx = _db.CreateContext();
         var repo = new Repository<ScaleConfig>(ctx);
+        var deletedId = SelectedScale.Id;
         await repo.DeleteAsync(SelectedScale);
+        await _db.DeleteScaleOptionsAsync(deletedId);
         await LoadScalesAsync();
+
+        // También se quita del gestor (se desconecta) y de la pantalla principal.
+        if (_scaleManager != null)
+            await _scaleManager.RemoveScaleAsync(deletedId);
+        _weighingVm?.RefreshScaleNames();
+
         ScaleStatusMessage = "Báscula eliminada";
     }
 
@@ -337,7 +372,7 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 
     // ── Protocol params (legacy - for editing single scale) ──
     [ObservableProperty] private string _selectedProtocolName = "Serial";
-    public string[] ProtocolNames => ["Serial", "Modbus TCP", "Modbus RTU", "Sensoc", "Sensocar A12", "Simulador"];
+    public string[] ProtocolNames => ProtocolCatalog.Names;
 
     [ObservableProperty] private int _serialBaudRate = 9600;
     [ObservableProperty] private int _serialParity;
@@ -426,107 +461,204 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
         }
     }
 
-    public bool IsSerialProtocol => SelectedProtocolName is "Serial" or "Modbus RTU" or "Sensoc" or "Sensocar A12";
-    public bool IsTcpProtocol => SelectedProtocolName == "Modbus TCP";
+    private ProtocolType SelectedProtocolType => ProtocolCatalog.TypeOf(SelectedProtocolName);
+
+    public bool IsSerialProtocol => !ProtocolCatalog.IsTcp(SelectedProtocolType);
+    public bool IsTcpProtocol => ProtocolCatalog.IsTcp(SelectedProtocolType);
+    public bool IsModbusCfg => ProtocolCatalog.IsModbusCfg(SelectedProtocolType);
+    public bool IsAsciiCfg => ProtocolCatalog.IsAsciiCfg(SelectedProtocolType);
+
+    public int[] ModbusFunctions { get; } = [3, 4];
+    public ModbusDataType[] ModbusDataTypes { get; } = Enum.GetValues<ModbusDataType>();
 
     partial void OnSelectedProtocolNameChanged(string value)
     {
         OnPropertyChanged(nameof(IsSerialProtocol));
         OnPropertyChanged(nameof(IsTcpProtocol));
+        OnPropertyChanged(nameof(IsModbusCfg));
+        OnPropertyChanged(nameof(IsAsciiCfg));
         if (EditingScale is not null)
-            EditingScale.ProtocolType = value switch
-            {
-                "Modbus TCP" => ProtocolType.ModbusTcp,
-                "Modbus RTU" => ProtocolType.ModbusRtu,
-                "Sensoc" => ProtocolType.Sensoc,
-                "Sensocar A12" => ProtocolType.SensocarA12,
-                "Simulador" => ProtocolType.Simulator,
-                _ => ProtocolType.Serial
-            };
+            EditingScale.ProtocolType = ProtocolCatalog.TypeOf(value);
+    }
+
+    // ── Perfiles de equipo ────────────────────────────────
+
+    public string[] ProfileNames { get; } = EquipmentProfile.BuiltIn.Select(p => p.Name).ToArray();
+    [ObservableProperty] private string? _selectedProfileName;
+
+    // Elegir un protocolo de la lista rellena de inmediato el protocolo y sus parámetros; no hay botón Aplicar.
+    partial void OnSelectedProfileNameChanged(string? value)
+    {
+        var profile = EquipmentProfile.BuiltIn.FirstOrDefault(p => p.Name == value);
+        if (profile is not null && IsScaleEditorOpen)
+            ApplyProfile(profile);
+    }
+
+    private void ApplyProfile(EquipmentProfile profile)
+    {
+        if (EditingScale is null) return;
+
+        // ScaleConfig no notifica cambios: se reasigna entero para que la pantalla se refresque.
+        EditingScale = profile.ApplyTo(EditingScale);
+        SelectedProtocolName = ProtocolCatalog.NameOf(profile.Protocol);
+        ScaleStatusMessage = $"{profile.Name}: {profile.Description} Indique el puerto o la IP y pulse Guardar.";
+    }
+
+    // Las básculas conectadas ocupan su puerto: se sueltan mientras se detecta o se prueba y se reconectan al terminar.
+    private async Task<List<ScaleInstance>> ReleaseConnectedScalesAsync()
+    {
+        var released = new List<ScaleInstance>();
+        if (_scaleManager == null) return released;
+
+        foreach (var s in _scaleManager.Scales.Where(s => s.IsConnected).ToList())
+        {
+            await s.Service.DisconnectAsync();
+            released.Add(s);
+        }
+        return released;
+    }
+
+    private static async Task ReconnectScalesAsync(IEnumerable<ScaleInstance> scales)
+    {
+        foreach (var s in scales)
+        {
+            try { await s.Service.ConnectAsync(); } catch { }
+        }
     }
 
     public string[] AvailablePorts => SerialPort.GetPortNames();
 
+    [ObservableProperty] private bool _isDetecting;
+
+    // Prueba los puertos y velocidades habituales y rellena la báscula con lo que encuentre.
     [RelayCommand]
-    private async Task TestConnectionAsync()
+    private async Task DetectEquipmentAsync()
     {
-        StatusMessage = "Probando conexión...";
+        if (IsDetecting || EditingScale is null) return;
+
+        IsDetecting = true;
+        var progress = new Progress<string>(m => ScaleStatusMessage = m);
+        var reconnect = new List<ScaleInstance>();
 
         try
         {
-            var protocolName = SelectedProtocolName;
+            reconnect = await ReleaseConnectedScalesAsync();
 
-            var config = new CommunicationConfig
+            var ports = AvailablePorts.OrderBy(p => p == EditingScale.PortName ? 0 : 1).ThenBy(p => p).ToList();
+            if (ports.Count == 0)
             {
-                Type = protocolName switch
-                {
-                    "Modbus TCP" => ProtocolType.ModbusTcp,
-                    "Modbus RTU" => ProtocolType.ModbusRtu,
-                    "Sensoc" => ProtocolType.Sensoc,
-                    "Sensocar A12" => ProtocolType.SensocarA12,
-                    "Simulador" => ProtocolType.Simulator,
-                    _ => ProtocolType.Serial
-                },
-                PortName = EditingScale?.PortName ?? "COM1",
-                BaudRate = EditingScale?.BaudRate ?? SerialBaudRate,
-                Parity = EditingScale?.Parity ?? SerialParity,
-                DataBits = EditingScale?.DataBits ?? SerialDataBits,
-                StopBits = EditingScale?.StopBits ?? SerialStopBits,
-                IpAddress = EditingScale?.IpAddress ?? "192.168.1.100",
-                TcpPort = TcpPort,
-                SlaveId = (byte)ModbusSlaveId,
-                RegisterAddress = (ushort)ModbusRegister,
-                ReadIntervalMs = ReadIntervalMs
-            };
-
-            IWeighingProtocol protocol = protocolName switch
-            {
-                "Modbus TCP" => new ModbusTcpProtocol(),
-                "Modbus RTU" => new ModbusRtuProtocol(),
-                "Sensoc" => new SensocProtocol(),
-                "Sensocar A12" => new SensocarA12Protocol(),
-                "Simulador" => new SimulatorProtocol(),
-                _ => new SerialProtocol()
-            };
-
-            var service = new WeighingService(protocol, config);
-            await service.ConnectAsync();
-
-            if (protocolName is "Sensoc" or "Sensocar A12")
-            {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                WeightReading? reading = null;
-                void handler(object? s, WeightReading r) { reading = r; }
-                protocol.WeightChanged += handler;
-                try
-                {
-                    await Task.Delay(3000, cts.Token);
-                }
-                catch (TaskCanceledException) { }
-                protocol.WeightChanged -= handler;
-
-                if (reading?.Value != 0)
-                    StatusMessage = $"Conexión exitosa — peso: {reading.Value} kg";
-                else
-                    StatusMessage = "Conectado, esperando datos de la báscula...";
-            }
-            else
-            {
-                await Task.Delay(500);
-                await service.RequestWeightAsync();
-                var testReading = service.LastReading;
-
-                if (testReading?.Value != 0)
-                    StatusMessage = $"Conexión exitosa — peso: {testReading.Value} kg";
-                else
-                    StatusMessage = "Conexión exitosa";
+                ScaleStatusMessage = "No hay puertos serie en este equipo. Conecte el cable o adaptador USB-serie.";
+                return;
             }
 
-            await service.DisconnectAsync();
+            var result = await Task.Run(() => new EquipmentDetector().DetectAsync(ports, progress));
+
+            if (result is null)
+            {
+                ScaleStatusMessage = "No se detectó el equipo. Verifique cable y alimentación, que ningún otro programa use el puerto, " +
+                                     "y que el visor transmita en continuo o esté en Modbus RTU (Kronos: COM > RS-232 > PC > PROTOC = MOD.RTU).";
+                return;
+            }
+
+            var detected = new ScaleConfig
+            {
+                Id = EditingScale.Id,
+                Name = EditingScale.Name,
+                IsActive = EditingScale.IsActive,
+                SortOrder = EditingScale.SortOrder,
+                ProtocolType = result.Protocol,
+                PortName = result.PortName,
+                BaudRate = result.BaudRate,
+                Parity = result.Parity,
+                DataBits = result.DataBits,
+                StopBits = result.StopBits,
+                IpAddress = EditingScale.IpAddress,
+                TcpPort = EditingScale.TcpPort,
+                SlaveId = result.SlaveId,
+                RegisterAddress = EditingScale.RegisterAddress,
+                ReadIntervalMs = EditingScale.ReadIntervalMs,
+                Options = result.Options ?? EditingScale.Options ?? new ProtocolOptions()
+            };
+
+            // ScaleConfig no notifica cambios: se reasigna entero para que la pantalla se refresque.
+            EditingScale = detected;
+            SelectedProtocolName = ProtocolCatalog.NameOf(result.Protocol);
+
+            ScaleStatusMessage = $"Detectado: {result.Description} en {result.PortName} a {result.BaudRate} baud. " +
+                                 "Revise los datos y pulse Guardar.";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error de conexión: {ex.Message}";
+            ScaleStatusMessage = $"Error al detectar: {ex.Message}";
+        }
+        finally
+        {
+            await ReconnectScalesAsync(reconnect);
+            IsDetecting = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestConnectionAsync()
+    {
+        if (EditingScale is null) return;
+
+        ScaleStatusMessage = "Probando conexión...";
+        var reconnect = new List<ScaleInstance>();
+
+        try
+        {
+            reconnect = await ReleaseConnectedScalesAsync();
+
+            // Se prueba exactamente lo que hay en el editor (incluye esclavo, registro y opciones).
+            var scale = EditingScale;
+            var config = scale.ToCommunicationConfig();
+            var protocol = ScaleManager.CreateProtocol(scale);
+            var where = ProtocolCatalog.IsTcp(scale.ProtocolType) ? $"{config.IpAddress}:{config.TcpPort}" : config.PortName;
+
+            var service = new WeighingService(protocol, config);
+            try
+            {
+                if (ProtocolCatalog.IsEventDriven(scale.ProtocolType))
+                {
+                    WeightReading? reading = null;
+                    protocol.WeightChanged += (_, r) => reading = r;
+                    string? lastError = null;
+                    protocol.ErrorOccurred += (_, e) => lastError = e;
+
+                    await service.ConnectAsync();
+                    await Task.Delay(3000);
+
+                    if (!protocol.IsConnected)
+                        ScaleStatusMessage = lastError ?? $"No se pudo abrir {where}. Verifique que exista y que ningún otro programa lo use.";
+                    else if (reading is { } r)
+                        ScaleStatusMessage = $"Conexión exitosa — peso: {r.Value} kg{(r.IsStable ? "" : " (inestable)")}";
+                    else
+                        ScaleStatusMessage = lastError ?? "Conectado, pero sin respuesta del equipo. Verifique protocolo, esclavo, baudios y formato.";
+                }
+                else
+                {
+                    await service.ConnectAsync();
+                    await Task.Delay(500);
+                    await service.RequestWeightAsync();
+
+                    ScaleStatusMessage = service.LastReading is { } last && last.Value != 0
+                        ? $"Conexión exitosa — peso: {last.Value} kg"
+                        : protocol.IsConnected ? "Conexión exitosa" : $"No se pudo abrir {where}.";
+                }
+            }
+            finally
+            {
+                await service.DisconnectAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ScaleStatusMessage = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            await ReconnectScalesAsync(reconnect);
         }
     }
 

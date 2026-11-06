@@ -224,6 +224,34 @@ public class SensocarA12Protocol : IWeighingProtocol, IDisposable
         if (frame.Count < 8) return;
 
         var statusByte = frame[0];
+
+        // Formato ASCII continuo (SC-A12 en 9600 8N1): '+'/'-' + 7 caracteres alineados a la derecha + CR,
+        // p. ej. "+     60". No trae estabilidad: la decide WeighingService con su ventana de lecturas.
+        if (statusByte is (byte)'+' or (byte)'-')
+        {
+            var text = Encoding.ASCII.GetString(frame.GetRange(1, frame.Count - 1).ToArray()).Trim();
+            var number = ParseWeightValue(text);
+            if (statusByte == (byte)'-' && number > 0)
+                number = -number;
+
+            LogDebug("FRAME", $"ascii sign='{(char)statusByte}' weight='{text}' value={number}");
+
+            var asciiReading = new WeightReading
+            {
+                Value = number,
+                IsStable = true,
+                Timestamp = DateTime.UtcNow,
+                RawData = $"{(char)statusByte}{text}"
+            };
+            lock (_bufferLock)
+            {
+                _lastReading = asciiReading;
+                _lastReadingTime = DateTime.UtcNow;
+            }
+            WeightChanged?.Invoke(this, asciiReading);
+            return;
+        }
+
         var weightChars = new byte[7];
         for (var i = 0; i < 7 && i + 1 < frame.Count; i++)
             weightChars[i] = frame[i + 1];
