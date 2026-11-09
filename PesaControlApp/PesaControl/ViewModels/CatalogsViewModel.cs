@@ -16,7 +16,6 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
         _db = db;
         _productEditor = new EditorTracker(() => EditorTracker.Snap(EditProductName, EditProductIsActive));
         _companyEditor = new EditorTracker(() => EditorTracker.Snap(EditCompanyName, EditCompanyRut, EditCompanyAddress, EditCompanyPhone, EditCompanyIsActive));
-        _operatorEditor = new EditorTracker(() => EditorTracker.Snap(EditOperatorName, EditOperatorPhone, EditOperatorCompany?.Id, EditOperatorIsActive));
         _driverEditor = new EditorTracker(() => EditorTracker.Snap(EditDriverName, EditDriverPhone, EditDriverCompany?.Id, EditDriverIsActive));
     }
 
@@ -24,26 +23,22 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
 
     private readonly EditorTracker _productEditor;
     private readonly EditorTracker _companyEditor;
-    private readonly EditorTracker _operatorEditor;
     private readonly EditorTracker _driverEditor;
 
     partial void OnIsProductEditorOpenChanged(bool value) { if (!value) _productEditor.End(); }
     partial void OnIsCompanyEditorOpenChanged(bool value) { if (!value) _companyEditor.End(); }
-    partial void OnIsOperatorEditorOpenChanged(bool value) { if (!value) _operatorEditor.End(); }
     partial void OnIsDriverEditorOpenChanged(bool value) { if (!value) _driverEditor.End(); }
 
     private bool ProductDirty => IsProductEditorOpen && _productEditor.IsDirty;
     private bool CompanyDirty => IsCompanyEditorOpen && _companyEditor.IsDirty;
-    private bool OperatorDirty => IsOperatorEditorOpen && _operatorEditor.IsDirty;
     private bool DriverDirty => IsDriverEditorOpen && _driverEditor.IsDirty;
 
-    public bool HasUnsavedChanges => ProductDirty || CompanyDirty || OperatorDirty || DriverDirty;
+    public bool HasUnsavedChanges => ProductDirty || CompanyDirty || DriverDirty;
 
     public string UnsavedChangesDescription => string.Join(", ", new[]
     {
         ProductDirty ? "Producto" : null,
         CompanyDirty ? "Empresa" : null,
-        OperatorDirty ? "Operador" : null,
         DriverDirty ? "Conductor" : null
     }.Where(x => x is not null));
 
@@ -52,7 +47,6 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
     {
         if (ProductDirty) { await SaveProductAsync(); if (IsProductEditorOpen) return false; }
         if (CompanyDirty) { await SaveCompanyAsync(); if (IsCompanyEditorOpen) return false; }
-        if (OperatorDirty) { await SaveOperatorAsync(); if (IsOperatorEditorOpen) return false; }
         if (DriverDirty) { await SaveDriverAsync(); if (IsDriverEditorOpen) return false; }
         return true;
     }
@@ -61,7 +55,6 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
     {
         CancelProductEdit();
         CancelCompanyEdit();
-        CancelOperatorEdit();
         CancelDriverEdit();
     }
 
@@ -140,6 +133,7 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
     private async Task DeleteProductAsync()
     {
         if (SelectedProduct is null) return;
+        if (!ConfirmDelete("producto", SelectedProduct.Name)) return;
         try
         {
             var ctx = _db.CreateContext();
@@ -246,6 +240,7 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
     private async Task DeleteCompanyAsync()
     {
         if (SelectedCompany is null) return;
+        if (!ConfirmDelete("empresa", SelectedCompany.Name)) return;
         try
         {
             var ctx = _db.CreateContext();
@@ -254,113 +249,6 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
             if (c is not null) await repo.DeleteAsync(c);
             Companies.Remove(SelectedCompany);
             SelectedCompany = null;
-        }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-    }
-
-    // ========== OPERATORS ==========
-    public ObservableCollection<Operator> Operators { get; } = [];
-    [ObservableProperty] private Operator? _selectedOperator;
-    [ObservableProperty] private bool _isOperatorEditorOpen;
-    [ObservableProperty] private string _editOperatorName = "";
-    [ObservableProperty] private string _editOperatorPhone = "";
-    [ObservableProperty] private Company? _editOperatorCompany;
-    [ObservableProperty] private bool _editOperatorIsActive = true;
-
-    [RelayCommand]
-    private async Task LoadOperatorsAsync()
-    {
-        var ctx = _db.CreateContext();
-        var repo = new Repository<Operator>(ctx);
-        var items = await repo.GetAllAsync();
-        var companies = await new Repository<Company>(ctx).GetAllAsync();
-        var companyDict = companies.ToDictionary(c => c.Id);
-        App.Current.Dispatcher.Invoke(() =>
-        {
-            Operators.Clear();
-            foreach (var o in items.OrderBy(x => x.FullName))
-            {
-                companyDict.TryGetValue(o.CompanyId, out var company);
-                o.Company = company;
-                Operators.Add(o);
-            }
-        });
-    }
-
-    [RelayCommand]
-    private void NewOperator()
-    {
-        SelectedOperator = null;
-        EditOperatorName = "";
-        EditOperatorPhone = "";
-        EditOperatorCompany = Companies.FirstOrDefault();
-        EditOperatorIsActive = true;
-        _operatorEditor.Begin();
-        IsOperatorEditorOpen = true;
-    }
-
-    [RelayCommand]
-    private void EditOperator()
-    {
-        if (SelectedOperator is null) return;
-        EditOperatorName = SelectedOperator.FullName;
-        EditOperatorPhone = SelectedOperator.Phone ?? "";
-        EditOperatorCompany = Companies.FirstOrDefault(c => c.Id == SelectedOperator.CompanyId);
-        EditOperatorIsActive = SelectedOperator.IsActive;
-        _operatorEditor.Begin();
-        IsOperatorEditorOpen = true;
-    }
-
-    [RelayCommand]
-    private async Task SaveOperatorAsync()
-    {
-        if (string.IsNullOrWhiteSpace(EditOperatorName) || EditOperatorCompany is null) return;
-        try
-        {
-            var ctx = _db.CreateContext();
-            var repo = new Repository<Operator>(ctx);
-            if (SelectedOperator is not null)
-            {
-                SelectedOperator.FullName = EditOperatorName.Trim();
-                SelectedOperator.Phone = EditOperatorPhone.Trim();
-                SelectedOperator.CompanyId = EditOperatorCompany.Id;
-                SelectedOperator.IsActive = EditOperatorIsActive;
-                await repo.UpdateAsync(SelectedOperator);
-            }
-            else
-            {
-                var o = new Operator
-                {
-                    FullName = EditOperatorName.Trim(),
-                    Phone = EditOperatorPhone.Trim(),
-                    CompanyId = EditOperatorCompany.Id,
-                    IsActive = EditOperatorIsActive
-                };
-                await repo.AddAsync(o);
-                Operators.Add(o);
-            }
-            IsOperatorEditorOpen = false;
-            SelectedOperator = null;
-            await LoadOperatorsAsync();
-        }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-    }
-
-    [RelayCommand]
-    private void CancelOperatorEdit() => IsOperatorEditorOpen = false;
-
-    [RelayCommand]
-    private async Task DeleteOperatorAsync()
-    {
-        if (SelectedOperator is null) return;
-        try
-        {
-            var ctx = _db.CreateContext();
-            var repo = new Repository<Operator>(ctx);
-            var o = await repo.GetByIdAsync(SelectedOperator.Id);
-            if (o is not null) await repo.DeleteAsync(o);
-            Operators.Remove(SelectedOperator);
-            SelectedOperator = null;
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
     }
@@ -460,6 +348,7 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
     private async Task DeleteDriverAsync()
     {
         if (SelectedDriver is null) return;
+        if (!ConfirmDelete("conductor", SelectedDriver.FullName)) return;
         try
         {
             var ctx = _db.CreateContext();
@@ -471,6 +360,11 @@ public partial class CatalogsViewModel : ObservableObject, IUnsavedChanges
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
     }
+
+    // Eliminar no tiene vuelta atrás: se pide confirmación antes.
+    private static bool ConfirmDelete(string kind, string name) =>
+        System.Windows.MessageBox.Show($"¿Eliminar {kind} \"{name}\"?\nEsta acción no se puede deshacer.", "Confirmar eliminación",
+            System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning, System.Windows.MessageBoxResult.No) == System.Windows.MessageBoxResult.Yes;
 
     // ========== STATUS ==========
     [ObservableProperty] private string _statusMessage = "";

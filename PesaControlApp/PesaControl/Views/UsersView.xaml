@@ -110,7 +110,7 @@
                                     <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
                                             Background="{StaticResource SurfaceLightBrush}"
                                             VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Role}"
+                                        <TextBlock Text="{Binding Role, Converter={StaticResource RoleName}}"
                                                    FontSize="11"
                                                    Foreground="{StaticResource TextSecondaryBrush}" />
                                     </Border>
@@ -176,7 +176,13 @@
                 <Label Content="Rol" Style="{StaticResource FormLabel}" />
                 <ComboBox ItemsSource="{Binding Roles}"
                           SelectedItem="{Binding EditRole}"
-                          Margin="0,0,0,8" />
+                          Margin="0,0,0,8">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource RoleName}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <TextBlock Text="{Binding RoleError}" Style="{StaticResource FieldError}" />
 
                 <Label Content="Contraseña" Style="{StaticResource FormLabel}" />

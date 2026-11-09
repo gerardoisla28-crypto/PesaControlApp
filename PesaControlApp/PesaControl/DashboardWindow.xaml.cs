@@ -43,6 +43,7 @@ public partial class DashboardWindow : Window
         var exportImport = new ExportImportService(dbService);
 
         var weighingVm = new WeighingViewModel(_scaleManager, dataService, dbService);
+        weighingVm.SetCurrentUser(currentUser);
         var barrierVm = new BarrierViewModel(dbService);
         var trafficLightVm = new TrafficLightViewModel(dbService);
 

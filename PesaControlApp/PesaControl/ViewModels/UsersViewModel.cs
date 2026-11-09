@@ -79,8 +79,8 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
         _currentUser = currentUser;
         _editor = new EditorTracker(() => EditorTracker.Snap(EditUsername, EditFullName, EditRole, EditIsActive, EditPassword, EditPasswordConfirm));
         Roles = currentUser.Role == UserRoles.SuperAdmin
-            ? [UserRoles.SuperAdmin, UserRoles.Admin, UserRoles.Operator, UserRoles.Viewer]
-            : [UserRoles.Operator, UserRoles.Viewer];
+            ? [UserRoles.SuperAdmin, UserRoles.Admin, UserRoles.Operator]
+            : [UserRoles.Operator];
     }
 
     [RelayCommand]

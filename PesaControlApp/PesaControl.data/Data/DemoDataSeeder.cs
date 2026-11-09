@@ -18,8 +18,8 @@ public static class DemoDataSeeder
     public const string AdminPassword = "AdminDemo2026-Chile";
     public const string OperatorUser = "operador";
     public const string OperatorPassword = "OperadorDemo2026";
-    public const string ViewerUser = "consulta";
-    public const string ViewerPassword = "ConsultaDemo2026";
+    public const string SecondOperatorUser = "operadora";
+    public const string SecondOperatorPassword = "OperadoraDemo2026";
 
     private const string MarkerKey = "demo_data_seeded";
     private const string StationCode = "STGO";
@@ -58,7 +58,7 @@ public static class DemoDataSeeder
         {
             (AdminUser, AdminPassword, "Administrador Demo", UserRoles.Admin),
             (OperatorUser, OperatorPassword, "Carlos Muñoz", UserRoles.Operator),
-            (ViewerUser, ViewerPassword, "Camila Soto", UserRoles.Viewer),
+            (SecondOperatorUser, SecondOperatorPassword, "María González", UserRoles.Operator),
         };
         foreach (var (username, password, fullName, role) in users)
         {
@@ -81,7 +81,15 @@ public static class DemoDataSeeder
         await SetConfigAsync(context, "receiving_company", PlantName);
 
         // Báscula virtual y sin cámaras: la demostración no depende de hardware.
-        foreach (var scale in await context.ScaleConfigs.ToListAsync())
+        var scales = await context.ScaleConfigs.ToListAsync();
+        // La base ya no trae una báscula por defecto: la demostración crea la suya, simulada.
+        if (scales.Count == 0)
+        {
+            var simulated = new ScaleConfig { Name = "Báscula 1", IsActive = true, SortOrder = 0 };
+            context.ScaleConfigs.Add(simulated);
+            scales.Add(simulated);
+        }
+        foreach (var scale in scales)
         {
             scale.Name = "Báscula 1";
             scale.ProtocolType = ProtocolType.Simulator;
@@ -101,7 +109,8 @@ public static class DemoDataSeeder
 
     private static async Task<List<DemoCompany>> SeedCatalogsAsync(AppDbContext context)
     {
-        foreach (var name in new[] { "Cal", "Fertilizantes", "Concentrado de cobre" })
+        // La base ya no trae productos por defecto: la demostración crea todos los suyos.
+        foreach (var name in new[] { "Áridos", "Cemento", "Hierro", "Madera", "Combustible", "Granos", "Cal", "Fertilizantes", "Concentrado de cobre" })
             if (!await context.Products.AnyAsync(p => p.Name == name))
                 context.Products.Add(new Product { Name = name, IsActive = true });
 
@@ -120,8 +129,11 @@ public static class DemoDataSeeder
             company.Address = address;
         }
 
+        // Las dos primeras ya no vienen de la base inicial, así que la demo las crea si no existen.
         var extra = new (string Name, int Rut, string Address, string Phone)[]
         {
+            ("Constructora Pehuén SA", 76_218_340, "Av. Américo Vespucio 1850, Pudahuel", "+56 9 1234 5678"),
+            ("Transportes Los Boldos Ltda.", 77_412_905, "Ruta 5 Sur Km 62, Buin", "+56 9 9876 5432"),
             ("Áridos Maipo SpA", 76_903_118, "Camino a Melipilla 4520, Maipú", "+56 9 8412 3376"),
             ("Agrícola Valle Central SpA", 77_068_552, "Ruta H-30 Km 8, Rancagua", "+56 9 7355 0914"),
             ("Fletes Cordillera Ltda.", 76_540_287, "Av. Los Libertadores 910, Los Andes", "+56 9 6120 4478"),

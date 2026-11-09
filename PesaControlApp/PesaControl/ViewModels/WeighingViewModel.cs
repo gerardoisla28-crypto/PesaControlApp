@@ -31,15 +31,12 @@ public partial class WeighingViewModel : ObservableObject
         _dataService = dataService;
         _dbService = dbService;
 
-        OperatorsView = CollectionViewSource.GetDefaultView(AllOperators);
-        OperatorsView.Filter = FilterOperator;
         DriversView = CollectionViewSource.GetDefaultView(AllDrivers);
         DriversView.Filter = FilterDriver;
 
         WireScaleEvents();
         _ = LoadCatalogsAsync();
         _ = LoadActiveWeighingsAsync();
-        _ = LoadOperatorsAsync();
         _ = LoadDriversAsync();
         _ = InitializeScalesAsync();
     }
@@ -250,33 +247,26 @@ public partial class WeighingViewModel : ObservableObject
         });
     }
 
-    // ── Operator / Driver dropdowns ───────────────────────
+    // ── Operator (usuario con sesión iniciada) / Driver dropdown ──
 
-    public ObservableCollection<Operator> AllOperators { get; } = [];
-    public ICollectionView OperatorsView { get; }
     public ObservableCollection<Driver> AllDrivers { get; } = [];
     public ICollectionView DriversView { get; }
 
-    [ObservableProperty] private bool _isOperatorDropdownOpen;
     [ObservableProperty] private bool _isDriverDropdownOpen;
     [ObservableProperty] private string _operatorName = "";
     [ObservableProperty] private string _driverName = "";
 
-    partial void OnSelectedCompanyChanged(Company? value)
+    // El operador de cada pesaje es quien tiene la sesión abierta: no se elige.
+    private string _sessionOperatorName = "";
+
+    public void SetCurrentUser(User user)
     {
-        OperatorsView.Refresh();
-        DriversView.Refresh();
+        _sessionOperatorName = string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName;
+        if (!IsWeighingIn && SelectedRecord is null)
+            OperatorName = _sessionOperatorName;
     }
 
-    partial void OnOperatorNameChanged(string value)
-    {
-        OperatorsView.Refresh();
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            bool exacto = AllOperators.Any(o => o.FullName.Equals(value, StringComparison.OrdinalIgnoreCase));
-            if (!exacto) IsOperatorDropdownOpen = true;
-        }
-    }
+    partial void OnSelectedCompanyChanged(Company? value) => DriversView.Refresh();
 
     partial void OnDriverNameChanged(string value)
     {
@@ -286,14 +276,6 @@ public partial class WeighingViewModel : ObservableObject
             bool exacto = AllDrivers.Any(d => d.FullName.Equals(value, StringComparison.OrdinalIgnoreCase));
             if (!exacto) IsDriverDropdownOpen = true;
         }
-    }
-
-    private bool FilterOperator(object obj)
-    {
-        if (obj is not Operator o) return false;
-        if (SelectedCompany is not null && o.CompanyId != SelectedCompany.Id) return false;
-        if (!string.IsNullOrEmpty(OperatorName) && !o.FullName.Contains(OperatorName, StringComparison.OrdinalIgnoreCase)) return false;
-        return true;
     }
 
     private bool FilterDriver(object obj)
@@ -395,9 +377,9 @@ public partial class WeighingViewModel : ObservableObject
     [RelayCommand]
     private async Task StartWeighInAsync()
     {
-        if (string.IsNullOrWhiteSpace(LicensePlate) || string.IsNullOrWhiteSpace(OperatorName))
+        if (string.IsNullOrWhiteSpace(LicensePlate))
         {
-            StatusMessage = "Complete patente y operador";
+            StatusMessage = "Complete la patente";
             return;
         }
 
@@ -425,7 +407,7 @@ public partial class WeighingViewModel : ObservableObject
             WeighInTime = DateTime.Now,
             LicensePlate = LicensePlate.Trim().ToUpper(),
             PlateCountry = PlateCountry,
-            OperatorName = OperatorName.Trim(),
+            OperatorName = (string.IsNullOrWhiteSpace(_sessionOperatorName) ? OperatorName : _sessionOperatorName).Trim(),
             DriverName = DriverName.Trim(),
             ProductId = SelectedProduct?.Id,
             CompanyId = SelectedCompany?.Id,
@@ -586,7 +568,7 @@ public partial class WeighingViewModel : ObservableObject
     {
         LicensePlate = "";
         PlateCountry = "CL";
-        OperatorName = "";
+        OperatorName = _sessionOperatorName;
         DriverName = "";
         SelectedProduct = null;
         SelectedCompany = null;
@@ -654,7 +636,6 @@ public partial class WeighingViewModel : ObservableObject
     private async Task RefreshCatalogsAsync()
     {
         await LoadCatalogsAsync();
-        await LoadOperatorsAsync();
         await LoadDriversAsync();
     }
 
@@ -672,17 +653,6 @@ public partial class WeighingViewModel : ObservableObject
         {
             Companies.Clear();
             foreach (var c in companies) Companies.Add(c);
-        });
-    }
-
-    private async Task LoadOperatorsAsync()
-    {
-        var items = await _dataService.GetOperatorsAsync();
-        RunOnUi(() =>
-        {
-            AllOperators.Clear();
-            foreach (var o in items) AllOperators.Add(o);
-            OperatorsView.Refresh();
         });
     }
 

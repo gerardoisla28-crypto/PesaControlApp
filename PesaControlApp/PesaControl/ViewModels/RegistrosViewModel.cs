@@ -43,7 +43,7 @@ public partial class RegistrosViewModel : ObservableObject
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<Company> Companies { get; } = new();
 
-    public RegistrosViewModel(DatabaseService dbService, string role = UserRoles.Viewer)
+    public RegistrosViewModel(DatabaseService dbService, string role = UserRoles.Operator)
     {
         _dbService = dbService;
         var ctx = dbService.CreateContext();

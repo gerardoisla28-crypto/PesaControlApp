@@ -15,6 +15,7 @@
     <conv:TrafficLightColorToBrushConverter x:Key="TrafficLightColorBrush" />
     <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
     <conv:NotNullToBoolConverter x:Key="NotNullToBool" />
+    <conv:RoleNameConverter x:Key="RoleName" />
     <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     <conv:StringVisibilityConverter x:Key="StringVisibilityConverter" />
 </ResourceDictionary>

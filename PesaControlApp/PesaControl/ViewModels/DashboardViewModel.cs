@@ -117,7 +117,6 @@ public partial class DashboardViewModel : ObservableObject
         CurrentViewModel = CatalogsVM;
         CatalogsVM?.LoadProductsCommand.Execute(null);
         CatalogsVM?.LoadCompaniesCommand.Execute(null);
-        CatalogsVM?.LoadOperatorsCommand.Execute(null);
         CatalogsVM?.LoadDriversCommand.Execute(null);
         CurrentSection = "Catalogos";
     }
