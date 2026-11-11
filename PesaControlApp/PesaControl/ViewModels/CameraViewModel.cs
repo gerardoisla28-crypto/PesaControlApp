@@ -14,7 +14,6 @@ namespace PesaControl.UI.ViewModels;
 public partial class CameraViewModel : ObservableObject
 {
     private readonly ICameraService _cameraService;
-    private readonly IAnprService? _anprService;
     private readonly DatabaseService _dbService;
     private readonly IRepository<CameraConfig> _cameraRepo;
     private readonly IDvrService _dvrService;
@@ -25,8 +24,6 @@ public partial class CameraViewModel : ObservableObject
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isPreviewRunning;
     [ObservableProperty] private ImageSource? _currentFrame;
-    [ObservableProperty] private string _detectedPlate = "";
-    [ObservableProperty] private double _anprConfidence;
     [ObservableProperty] private string _statusMessage = "Listo";
 
     [ObservableProperty] private bool _isDvrMode;
@@ -51,10 +48,6 @@ public partial class CameraViewModel : ObservableObject
     [ObservableProperty] private ImageSource? _dvrFrame2;
     [ObservableProperty] private ImageSource? _dvrFrame3;
     [ObservableProperty] private ImageSource? _dvrFrame4;
-    [ObservableProperty] private string _dvrChannel1Plate = "";
-    [ObservableProperty] private string _dvrChannel2Plate = "";
-    [ObservableProperty] private string _dvrChannel3Plate = "";
-    [ObservableProperty] private string _dvrChannel4Plate = "";
     [ObservableProperty] private string _dvrStatus1 = "Inactivo";
     [ObservableProperty] private string _dvrStatus2 = "Inactivo";
     [ObservableProperty] private string _dvrStatus3 = "Inactivo";
@@ -70,16 +63,45 @@ public partial class CameraViewModel : ObservableObject
     [ObservableProperty] private int _selectedPtzChannel = 1;
 
     public ObservableCollection<CameraConfig> Cameras { get; } = [];
+
+    /// <summary>True si hay al menos una cámara configurada (se "detecta" cámara).</summary>
+    public bool HasCameras => Cameras.Count > 0;
+
+    // Decisión manual del administrador: mostrar o no la cámara en la ventana de Pesaje.
+    private const string ShowCameraKey = "weighing_show_camera";
+    private bool _loadingDisplayFlag;
+    [ObservableProperty] private bool _showCameraInWeighing = true;
+
+    partial void OnShowCameraInWeighingChanged(bool value)
+    {
+        if (_loadingDisplayFlag) return;
+        _ = SaveShowCameraAsync(value);
+    }
+
+    private async Task SaveShowCameraAsync(bool value)
+    {
+        try { await _dbService.SetFlagAsync(ShowCameraKey, value); }
+        catch (Exception ex) { App.Current.Dispatcher.Invoke(() => StatusMessage = $"No se pudo guardar la preferencia: {ex.Message}"); }
+    }
+
+    private async Task LoadShowCameraAsync()
+    {
+        try
+        {
+            var value = await _dbService.GetFlagAsync(ShowCameraKey, true);
+            _loadingDisplayFlag = true;
+            App.Current.Dispatcher.Invoke(() => ShowCameraInWeighing = value);
+        }
+        catch { /* si falla, se muestra */ }
+        finally { _loadingDisplayFlag = false; }
+    }
     public ObservableCollection<DvrConfig> DvrConfigs { get; } = [];
     public int[] ChannelNumbers => [1, 2, 3, 4];
 
-    public event EventHandler<string>? PlateDetected;
-
-    public CameraViewModel(ICameraService cameraService, IDvrService dvrService, IAnprService? anprService, DatabaseService dbService)
+    public CameraViewModel(ICameraService cameraService, IDvrService dvrService, DatabaseService dbService)
     {
         _cameraService = cameraService;
         _dvrService = dvrService;
-        _anprService = anprService;
         _dbService = dbService;
         var ctx = dbService.CreateContext();
         _cameraRepo = new Repository<CameraConfig>(ctx);
@@ -93,8 +115,11 @@ public partial class CameraViewModel : ObservableObject
         _dvrService.ErrorOccurred += (_, err) =>
             App.Current.Dispatcher.Invoke(() => StatusMessage = $"DVR error: {err}");
 
+        Cameras.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCameras));
+
         _ = LoadCamerasAsync();
         _ = LoadDvrConfigsAsync();
+        _ = LoadShowCameraAsync();
     }
 
     // ── Existing camera commands ──
@@ -128,7 +153,6 @@ public partial class CameraViewModel : ObservableObject
         await _cameraService.DisconnectAsync();
         IsPreviewRunning = false;
         CurrentFrame = null;
-        DetectedPlate = "";
         StatusMessage = "Desconectado";
     }
 
@@ -140,9 +164,6 @@ public partial class CameraViewModel : ObservableObject
             var jpeg = await _cameraService.CaptureStillAsync();
             CurrentFrame = BytesToImageSource(jpeg);
             StatusMessage = "Foto capturada";
-
-            if (_anprService?.IsAvailable == true)
-                await RecognizePlateAsync(jpeg);
         }
         catch (Exception ex)
         {
@@ -370,9 +391,6 @@ public partial class CameraViewModel : ObservableObject
                 case 4: DvrFrame4 = img; break;
             }
             StatusMessage = $"Snapshot CH{channel} capturado";
-
-            if (_anprService?.IsAvailable == true)
-                await RecognizeDvrPlateAsync(jpeg, channel);
         }
         catch (Exception ex)
         {
@@ -385,13 +403,6 @@ public partial class CameraViewModel : ObservableObject
     {
         for (int ch = 1; ch <= 4; ch++)
             await CaptureDvrSnapshotAsync(ch);
-    }
-
-    [RelayCommand]
-    private async Task CaptureSelectedAnprAsync()
-    {
-        if (!IsDvrConnected || SelectedPtzChannel < 1 || SelectedPtzChannel > 4) return;
-        await CaptureDvrSnapshotAsync(SelectedPtzChannel);
     }
 
     // ── PTZ ──
@@ -483,82 +494,27 @@ public partial class CameraViewModel : ObservableObject
         _dvrStreamTimer = null;
     }
 
-    private async Task RecognizeDvrPlateAsync(byte[] jpeg, int channel)
+    // La captura corre en otro hilo y puede seguir enviando cuadros mientras la app se cierra:
+    // sin ventana (App.Current nulo o cerrándose) no hay nada que actualizar.
+    private static System.Windows.Threading.Dispatcher? LiveDispatcher()
     {
-        if (_anprService == null) return;
-        var result = await _anprService.RecognizeAsync(jpeg);
-        App.Current.Dispatcher.Invoke(() =>
-        {
-            if (result.IsSuccessful)
-            {
-                var plate = $"{result.Plate} ({result.Confidence:P0})";
-                switch (channel)
-                {
-                    case 1: DvrChannel1Plate = plate; break;
-                    case 2: DvrChannel2Plate = plate; break;
-                    case 3: DvrChannel3Plate = plate; break;
-                    case 4: DvrChannel4Plate = plate; break;
-                }
-                DetectedPlate = result.Plate;
-                AnprConfidence = result.Confidence;
-                PlateDetected?.Invoke(this, result.Plate);
-                _ = SavePlateRecordAsync(result);
-            }
-        });
-    }
-
-    private async Task RecognizePlateAsync(byte[] jpeg)
-    {
-        if (_anprService == null) return;
-
-        var result = await _anprService.RecognizeAsync(jpeg);
-        App.Current.Dispatcher.Invoke(() =>
-        {
-            if (result.IsSuccessful)
-            {
-                DetectedPlate = result.Plate;
-                AnprConfidence = result.Confidence;
-                StatusMessage = $"Patente: {result.Plate} ({result.Confidence:P0})";
-                PlateDetected?.Invoke(this, result.Plate);
-                _ = SavePlateRecordAsync(result);
-            }
-            else
-            {
-                StatusMessage = result.ErrorMessage ?? "No se reconoció patente";
-            }
-        });
-    }
-
-    private async Task SavePlateRecordAsync(PlateRecognitionResult result)
-    {
-        try
-        {
-            var ctx = _dbService.CreateContext();
-            var repo = new Repository<PlateRecord>(ctx);
-            await repo.AddAsync(new PlateRecord
-            {
-                Plate = result.Plate,
-                Region = result.Region,
-                Confidence = result.Confidence,
-                Source = _anprService?.Name ?? "ANPR",
-                Timestamp = DateTime.UtcNow,
-                CameraConfigId = SelectedCamera?.Id
-            });
-        }
-        catch { }
+        var dispatcher = App.Current?.Dispatcher;
+        return dispatcher is { HasShutdownStarted: false } ? dispatcher : null;
     }
 
     private void OnFrameCaptured(object? sender, byte[] jpeg)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        // BeginInvoke: el hilo de la cámara no espera a la interfaz (evita bloqueos al cerrar)
+        LiveDispatcher()?.BeginInvoke(() =>
         {
-            CurrentFrame = BytesToImageSource(jpeg);
+            try { CurrentFrame = BytesToImageSource(jpeg); }
+            catch { /* cuadro dañado: se descarta */ }
         });
     }
 
     private void OnConnectionStatusChanged(object? sender, bool connected)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        LiveDispatcher()?.Invoke(() =>
         {
             IsConnected = connected;
             if (!connected)

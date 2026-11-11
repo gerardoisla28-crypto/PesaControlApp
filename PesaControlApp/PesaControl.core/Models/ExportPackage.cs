@@ -15,7 +15,6 @@ public class ExportPackage
     public List<Operator> Operators { get; set; } = [];
     public List<User> Users { get; set; } = [];
     public List<WeighingRecord> WeighingRecords { get; set; } = [];
-    public List<PlateRecord> PlateRecords { get; set; } = [];
     public List<SystemConfig> SystemConfigs { get; set; } = [];
     public List<BarrierConfig> BarrierConfigs { get; set; } = [];
     public List<TrafficLightConfig> TrafficLightConfigs { get; set; } = [];
@@ -40,7 +39,6 @@ public class ImportResult
     public int OperatorsImported { get; set; }
     public int UsersImported { get; set; }
     public int WeighingRecordsImported { get; set; }
-    public int PlateRecordsImported { get; set; }
     public int SystemConfigsImported { get; set; }
     public int BarrierConfigsImported { get; set; }
     public int TrafficLightConfigsImported { get; set; }

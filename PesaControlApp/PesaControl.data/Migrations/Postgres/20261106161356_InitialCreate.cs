@@ -105,7 +105,8 @@ namespace PesaControl.Data.Migrations.Postgres
                     TcpPort = table.Column<int>(type: "integer", nullable: false),
                     SlaveId = table.Column<byte>(type: "smallint", nullable: false),
                     RegisterAddress = table.Column<int>(type: "integer", nullable: false),
-                    ReadIntervalMs = table.Column<int>(type: "integer", nullable: false)
+                    ReadIntervalMs = table.Column<int>(type: "integer", nullable: false),
+                    WeightDecimals = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -124,6 +125,18 @@ namespace PesaControl.Data.Migrations.Postgres
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SystemConfigs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TicketCounters",
+                columns: table => new
+                {
+                    Prefix = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    LastNumber = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketCounters", x => x.Prefix);
                 });
 
             migrationBuilder.CreateTable(
@@ -264,11 +277,13 @@ namespace PesaControl.Data.Migrations.Postgres
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     TicketNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    StationCode = table.Column<string>(type: "character varying(4)", maxLength: 4, nullable: false),
                     WeighInTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     WeighOutTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     GrossWeight = table.Column<decimal>(type: "numeric(18,3)", nullable: false),
                     TareWeight = table.Column<decimal>(type: "numeric(18,3)", nullable: false),
                     NetWeight = table.Column<decimal>(type: "numeric(18,3)", nullable: false),
+                    WeightDecimals = table.Column<int>(type: "integer", nullable: false),
                     LicensePlate = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     PlateCountry = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false, defaultValue: "CL"),
                     OperatorName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
@@ -281,7 +296,10 @@ namespace PesaControl.Data.Migrations.Postgres
                     EntryScaleName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ExitScaleName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     IsExitWeightManual = table.Column<bool>(type: "boolean", nullable: false),
-                    Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
+                    Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    ModifiedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    SyncStatus = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false, defaultValue: "Pending"),
+                    SyncedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -300,37 +318,6 @@ namespace PesaControl.Data.Migrations.Postgres
                         onDelete: ReferentialAction.SetNull);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "PlateRecords",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Plate = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Region = table.Column<string>(type: "character varying(5)", maxLength: 5, nullable: false),
-                    Confidence = table.Column<double>(type: "double precision", nullable: false),
-                    Source = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
-                    Timestamp = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
-                    CameraConfigId = table.Column<int>(type: "integer", nullable: true),
-                    WeighingRecordId = table.Column<int>(type: "integer", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PlateRecords", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_PlateRecords_CameraConfigs_CameraConfigId",
-                        column: x => x.CameraConfigId,
-                        principalTable: "CameraConfigs",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_PlateRecords_WeighingRecords_WeighingRecordId",
-                        column: x => x.WeighingRecordId,
-                        principalTable: "WeighingRecords",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_CameraConfigs_DvrConfigId",
                 table: "CameraConfigs",
@@ -345,26 +332,6 @@ namespace PesaControl.Data.Migrations.Postgres
                 name: "IX_Operators_CompanyId",
                 table: "Operators",
                 column: "CompanyId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlateRecords_CameraConfigId",
-                table: "PlateRecords",
-                column: "CameraConfigId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlateRecords_Plate",
-                table: "PlateRecords",
-                column: "Plate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlateRecords_Timestamp",
-                table: "PlateRecords",
-                column: "Timestamp");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlateRecords_WeighingRecordId",
-                table: "PlateRecords",
-                column: "WeighingRecordId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SystemConfigs_Key",
@@ -394,6 +361,11 @@ namespace PesaControl.Data.Migrations.Postgres
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_WeighingRecords_SyncStatus",
+                table: "WeighingRecords",
+                column: "SyncStatus");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_WeighingRecords_TicketNumber",
                 table: "WeighingRecords",
                 column: "TicketNumber",
@@ -412,19 +384,22 @@ namespace PesaControl.Data.Migrations.Postgres
                 name: "BarrierConfigs");
 
             migrationBuilder.DropTable(
+                name: "CameraConfigs");
+
+            migrationBuilder.DropTable(
                 name: "Drivers");
 
             migrationBuilder.DropTable(
                 name: "Operators");
 
             migrationBuilder.DropTable(
-                name: "PlateRecords");
-
-            migrationBuilder.DropTable(
                 name: "ScaleConfigs");
 
             migrationBuilder.DropTable(
                 name: "SystemConfigs");
+
+            migrationBuilder.DropTable(
+                name: "TicketCounters");
 
             migrationBuilder.DropTable(
                 name: "TicketTemplates");
@@ -434,9 +409,6 @@ namespace PesaControl.Data.Migrations.Postgres
 
             migrationBuilder.DropTable(
                 name: "Users");
-
-            migrationBuilder.DropTable(
-                name: "CameraConfigs");
 
             migrationBuilder.DropTable(
                 name: "WeighingRecords");

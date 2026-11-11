@@ -70,7 +70,6 @@ public class ExportImportService
                 operators = package.Operators.Count,
                 users = package.Users.Count,
                 weighings = package.WeighingRecords.Count,
-                plateRecords = package.PlateRecords.Count,
                 configs = package.SystemConfigs.Count,
                 photos = package.Photos.Count
             }
@@ -226,13 +225,6 @@ public class ExportImportService
             }
             result.WeighingRecordsImported = package.WeighingRecords.Count;
 
-            if (package.PlateRecords.Count > 0)
-            {
-                context.PlateRecords.AddRange(package.PlateRecords);
-                await context.SaveChangesAsync();
-            }
-            result.PlateRecordsImported = package.PlateRecords.Count;
-
             if (package.SystemConfigs.Count > 0)
             {
                 context.SystemConfigs.AddRange(package.SystemConfigs.Where(c => c.Key != DatabaseService.StationCodeKey));
@@ -352,12 +344,6 @@ public class ExportImportService
         });
         progress?.Report(35);
 
-        package.PlateRecords = await context.PlateRecords.ToListAsync();
-        ClearNavProperties(package.PlateRecords, p =>
-        {
-            p.Camera = null;
-            p.WeighingRecord = null;
-        });
         progress?.Report(40);
 
         // El código de puesto es propio de cada equipo: no viaja en los respaldos.
