@@ -18,6 +18,8 @@ public partial class TrafficLightViewModel : ObservableObject, IUnsavedChanges
 
     [ObservableProperty] private TrafficLightConfig? _selectedTrafficLight;
     [ObservableProperty] private bool _isConnected;
+    /// <summary>False si el equipo conectado informó que no tiene semáforo instalado.</summary>
+    [ObservableProperty] private bool _hasTrafficLight = true;
     [ObservableProperty] private TrafficLightColor _currentColor = TrafficLightColor.Off;
     [ObservableProperty] private string _statusMessage = "Listo";
 
@@ -158,6 +160,7 @@ public partial class TrafficLightViewModel : ObservableObject, IUnsavedChanges
                 App.Current.Dispatcher.Invoke(() => StatusMessage = $"Error: {err}");
 
             await _trafficLightService.ConnectAsync(SelectedTrafficLight);
+            HasTrafficLight = (_trafficLightService as IAccessDeviceInfo)?.HasTrafficLight ?? true;
             IsConnected = true;
 
             StatusMessage = $"Conectado a {SelectedTrafficLight.Name}";

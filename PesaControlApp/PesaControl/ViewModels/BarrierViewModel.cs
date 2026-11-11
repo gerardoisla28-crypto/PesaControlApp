@@ -20,6 +20,8 @@ public partial class BarrierViewModel : ObservableObject, IUnsavedChanges
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private string _statusMessage = "Listo";
+    /// <summary>False si el equipo conectado informó que no tiene barrera instalada.</summary>
+    [ObservableProperty] private bool _hasBarrier = true;
 
     public ObservableCollection<BarrierConfig> Barriers { get; } = new();
 
@@ -154,6 +156,7 @@ public partial class BarrierViewModel : ObservableObject, IUnsavedChanges
                 App.Current.Dispatcher.Invoke(() => StatusMessage = $"Error: {err}");
 
             await _barrierService.ConnectAsync(SelectedBarrier);
+            HasBarrier = (_barrierService as IAccessDeviceInfo)?.HasBarrier ?? true;
 
             var status = await _barrierService.GetStatusAsync();
             IsOpen = status;

@@ -113,6 +113,27 @@ public class DatabaseService
         await context.SaveChangesAsync();
     }
 
+    // ── Preferencias simples de este puesto (sí/no) ──────────
+
+    public async Task<bool> GetFlagAsync(string key, bool defaultValue)
+    {
+        await using var context = CreateContext();
+        var value = await context.SystemConfigs
+            .Where(c => c.Key == key)
+            .Select(c => c.Value)
+            .FirstOrDefaultAsync();
+        return value is null ? defaultValue : value == "1";
+    }
+
+    public async Task SetFlagAsync(string key, bool value)
+    {
+        await using var context = CreateContext();
+        var row = await context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == key);
+        if (row is null) context.SystemConfigs.Add(new SystemConfig { Key = key, Value = value ? "1" : "0" });
+        else row.Value = value ? "1" : "0";
+        await context.SaveChangesAsync();
+    }
+
     public async Task<bool> HasAdminAsync()
     {
         await using var context = CreateContext();
