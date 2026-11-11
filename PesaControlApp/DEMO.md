@@ -13,13 +13,15 @@ Qué prepara (`PesaControl.data/Data/DemoDataSeeder.cs`):
 - Código de puesto `STGO` y tickets `STGO-AAAA-MM-NNNN`.
 - Báscula simulada (`SimulatorProtocol`): el peso sube, se estabiliza unos 20 segundos, baja y se repite con otro camión. También se puede elegir "Simulador" en Configuración › Básculas.
 - Cámaras desactivadas, porque no hay hardware.
+- Todo lo anterior lo crea la demostración; la base de una instalación real arranca vacía, sin empresas, conductores, productos ni básculas de ejemplo.
+- Los operadores de los pesajes son los usuarios con rol Operador (aquí `operador` y `operadora`).
 
 Usuarios de la base de demostración (no sirven en una instalación real):
 
 | Usuario    | Rol      | Contraseña            |
 |------------|----------|-----------------------|
 | `admin`    | Admin    | `AdminDemo2026-Chile` |
-| `operador` | Operator | `OperadorDemo2026`    |
-| `consulta` | Viewer   | `ConsultaDemo2026`    |
+| `operador` | Operador | `OperadorDemo2026`    |
+| `operadora` | Operador | `OperadoraDemo2026`   |
 
 El sembrado solo corre si `PESACONTROL_DEMO=1` **y** `PESACONTROL_DB_PATH` apunta a una base aparte; si no, se niega a ejecutarse.

@@ -16,6 +16,7 @@ public partial class DashboardViewModel : ObservableObject
 
     public User CurrentUser { get; }
     public bool IsAdmin => UserRoles.CanManageUsers(CurrentUser.Role);
+    public bool CanConfigure => UserRoles.CanConfigureSystem(CurrentUser.Role);
 
     public WeighingViewModel? WeighingVM { get; set; }
     public CameraViewModel? CameraVM { get; set; }
@@ -63,30 +64,11 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ShowCamerasAsync()
-    {
-        if (!await CanLeaveCurrentAsync()) return;
-        CurrentViewModel = CameraVM;
-        CurrentSection = "Camaras";
-    }
-
-    [RelayCommand]
     private async Task ShowRegistrosAsync()
     {
         if (!await CanLeaveCurrentAsync()) return;
         CurrentViewModel = RegistrosVM;
         CurrentSection = "Registros";
-    }
-
-    [RelayCommand]
-    private async Task ShowControlsAsync()
-    {
-        if (!await CanLeaveCurrentAsync()) return;
-        if (IsControlModuleEnabled)
-        {
-            CurrentViewModel = ControlsVM;
-            CurrentSection = "Control";
-        }
     }
 
     [RelayCommand]
@@ -103,7 +85,7 @@ public partial class DashboardViewModel : ObservableObject
     private async Task ShowSettingsAsync()
     {
         if (!await CanLeaveCurrentAsync()) return;
-        if (!IsAdmin) return;
+        if (!CanConfigure) return;
         CurrentViewModel = SettingsVM;
         SettingsVM?.LoadConfigCommand.Execute(null);
         CurrentSection = "Configuracion";
@@ -117,7 +99,6 @@ public partial class DashboardViewModel : ObservableObject
         CurrentViewModel = CatalogsVM;
         CatalogsVM?.LoadProductsCommand.Execute(null);
         CatalogsVM?.LoadCompaniesCommand.Execute(null);
-        CatalogsVM?.LoadOperatorsCommand.Execute(null);
         CatalogsVM?.LoadDriversCommand.Execute(null);
         CurrentSection = "Catalogos";
     }
@@ -140,6 +121,7 @@ public partial class DashboardViewModel : ObservableObject
         App.Current.Dispatcher.Invoke(() =>
         {
             IsControlModuleEnabled = dict.GetValueOrDefault("module_control_enabled", "true") == "true";
+            if (SettingsVM != null) SettingsVM.IsControlModuleEnabled = IsControlModuleEnabled;
         });
     }
 }

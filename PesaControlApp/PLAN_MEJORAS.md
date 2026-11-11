@@ -4,6 +4,22 @@ Objetivo: dejar PesaControl terminado y estable para empezar a venderlo, tomando
 
 > Basado en la estructura de archivos y búsquedas puntuales (`EnsureCreated`, cadena de conexión SQLite, `catch` genéricos). No es una auditoría completa: validar cada punto antes de ejecutarlo.
 
+## Avance reciente (2026-11-11, rama `feature/file-exchange`)
+
+### Hecho
+- [x] **ANPR eliminado**: servicio PlateRecognizer, `PlateRecord`, `PlateRecognitionResult`, la tabla y su paso por exportación/importación (los respaldos antiguos con patentes se importan ignorando ese dato). La app ya no necesita internet para operar.
+- [x] **Migraciones aplastadas** en un único `InitialCreate` por proveedor, y las bases arrancan vacías. Desde la primera entrega quedan congeladas.
+- [x] **Detección del equipo de acceso**: el sketch de Arduino responde `CAPS` (barrera/semáforo instalados) y la app solo muestra las salidas que existen (`IAccessDeviceInfo`). Con un sketch antiguo asume barrera y semáforo.
+- [x] **Cámaras y Control dentro de Configuración**, visibles solo para el SuperAdmin; pestaña Control con cambios sin guardar controlados. En Pesaje se puede elegir mostrar u ocultar barrera, semáforo y cámara (preferencias por puesto).
+- [x] **Cámara**: la vista previa ya no bloquea al llamarla y tolera cuadros dañados o el cierre de la app.
+- [x] **Rediseño** de Usuarios, Control, Cámaras y la barra lateral de Pesaje.
+
+### Pendiente de este tramo
+- [ ] Confirmar el cambio de color de tarjetas y barra lateral (`SurfaceCard` y `SidebarBg` en `#C5D4EB`).
+- [ ] Reflashear el Arduino con el sketch nuevo (comando `CAPS`) y probar con equipo real, incluido el caso de una sola salida instalada.
+- [ ] Probar la app a mano: no hay pruebas automáticas y este tramo solo se verificó compilando.
+- [ ] Revisar las advertencias de compilación (11), p. ej. el evento `DahuaDvrService.ErrorOccurred` sin usar.
+
 ## Avance (actualizado el 2026-10-20)
 
 Todo lo hecho está en la rama `feature/postgresql` (aún sin fusionar a `dev`). Probado contra PostgreSQL 18 local: el login entra al panel.
@@ -17,9 +33,9 @@ Todo lo hecho está en la rama `feature/postgresql` (aún sin fusionar a `dev`).
   - Contraseña: 14 a 128 caracteres para SuperAdmin y Admin; 8 a 128 para Operator y Viewer. Sin reglas de composición (criterio NIST).
   - Usuario: 3 a 50 caracteres ASCII (letras, números, punto, guion y guion bajo), sin espacios. El login distingue mayúsculas y minúsculas.
   - Nombre completo: espacios normalizados y máximo 100 caracteres.
-- [x] **Pantalla "Crear Admin"**: usuario libre, nombre y apellido obligatorios, contraseña con confirmación y ojito, errores bajo cada campo, campos obligatorios marcados con `*`.
+- [x] **Pantalla "Crear usuario administrador"**: nombre y apellido (primer campo) y usuario obligatorios, contraseña con confirmación y ojito, errores bajo cada campo, campos obligatorios marcados con `*`.
 - [x] **Gestión de usuarios**: aplica las políticas y pide confirmar la contraseña; los campos de contraseña se limpian al reabrir el editor.
-- [x] **Arranque**: la base se inicializa en `App.OnStartup`; si no hay Admin se muestra solo "Crear Admin" y luego el login, con un mensaje de confirmación.
+- [x] **Arranque**: la base se inicializa en `App.OnStartup`; si no hay Admin se muestra solo "Crear usuario administrador" y luego el login, con un mensaje de confirmación.
 - [x] **Login**: errores bajo cada campo y un único mensaje para credenciales incorrectas, Enter para ingresar, botones minimizar y cerrar, cierre con Esc y arrastre de la ventana.
 - [x] **Bloqueo al entrar al panel corregido**: `DashboardWindow` esperaba consultas con `.GetAwaiter().GetResult()` en el hilo de la interfaz, lo que con PostgreSQL provoca un bloqueo mutuo. Ahora se carga con `DashboardWindow.CreateAsync`. El comando "Ver detalle" de registros tenía el mismo problema.
 - [x] **Documentación**: `REQUISITOS_CLIENTE.md` y `AGENTS.md` actualizados.
@@ -148,7 +164,7 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - Mantener Argon2id (mejor que el BCrypt de Weight-Trak). **No cambiar.**
 
 ### 6. Esquema de roles y usuarios — **parcial**
-- Hecho: políticas de contraseña, usuario y nombre por rol; creación del Admin dentro de la app. El SuperAdmin sigue creándose con `Provisioner`.
+- Hecho: políticas de contraseña, usuario y nombre por rol; creación del Admin dentro de la app; permiso `UserRoles.CanConfigureSystem` (la configuración del sistema es solo del SuperAdmin) y descripción del rol en el editor de usuarios. El SuperAdmin sigue creándose con `Provisioner`.
 - Pendiente: protección del último SuperAdmin e inyección de dependencias.
 - Riesgo medio: hay que migrar los usuarios existentes. `AuthService` se crea con `new AuthService()`.
 - Hacerlo junto con la inyección de dependencias.
@@ -168,7 +184,6 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] **Registro de errores a archivo** (Serilog o similar). Hay ~28 `catch` que tragan errores, lo que impide dar soporte.
 
 ### Seguridad
-- [ ] Revisar dónde se guarda la clave de PlateRecognizer (no en texto plano ni en el repositorio; usar DPAPI).
 - [ ] Bloqueo tras intentos fallidos de login, con aviso al operador de contactar a Administración.
 - [ ] Confirmación de contraseña antes de acciones destructivas.
 
@@ -177,7 +192,7 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
 - [ ] Maestros más completos: transportistas, clientes, lugares, vehículos (revisar qué cubre `CatalogsViewModel`).
 - [ ] Flujos de recepción, despacho y servicio, con tipos de ticket.
 - [ ] Reportes por folio y fechas; añadir exportación a Word (Excel y PDF ya existen).
-- [ ] Control de contraseña reutilizable. *Avance: ya existe la confirmación con ojito en "Crear Admin" y en usuarios, pero está duplicada en XAML; extraerla a un control compartido.*
+- [ ] Control de contraseña reutilizable. *Avance: ya existe la confirmación con ojito en "Crear usuario administrador" y en usuarios, pero está duplicada en XAML; extraerla a un control compartido.*
 
 ### Opcional
 - [ ] **Importación de catálogos desde Excel/CSV con plantilla**, para clientes que vienen de otro software de pesaje y quieren cargar sus maestros (transportistas, clientes, lugares, vehículos, productos).
@@ -189,7 +204,7 @@ Hacer respaldo de la base de datos y trabajar en una rama de git antes de cada u
   - Reutilizar lo que ya exista en `ExportImportService` y las librerías de Excel/CSV del proyecto.
 
 ### Calidad
-- [ ] Quitar código ambiguo (p. ej. mención a PaddleOCR en `PlateRecord.Source` sin implementación).
+- [x] Se quitó el reconocimiento automático de patentes (ANPR), el código ambiguo asociado y la tabla `PlateRecords`. Como aún no hay entregas, no se añadió una migración `RemovePlateRecords`: las migraciones se aplastaron en una sola `InitialCreate` por proveedor (SQLite y PostgreSQL). Las bases creadas con las migraciones anteriores deben recrearse.
 - [ ] Dejar `SerialTest` fuera del instalador y documentado.
 - [ ] CI mínimo con `dotnet build` y `dotnet test`.
 - [ ] README y manual de instalación y soporte.

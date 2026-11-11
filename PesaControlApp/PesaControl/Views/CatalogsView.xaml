@@ -6,259 +6,451 @@
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="1000"
              Foreground="{StaticResource TextPrimaryBrush}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0,0,15,0">
-            <TextBlock Text="Catálogos" Style="{StaticResource SectionTitle}" FontSize="20" />
 
-            <!-- PRODUCTS -->
-            <Border Style="{StaticResource CardPanel}">
-                <StackPanel>
-                    <TextBlock Text="Productos" Style="{StaticResource SectionTitle}" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="250" />
-                        </Grid.ColumnDefinitions>
-
-                        <ListBox ItemsSource="{Binding Products}"
-                                 SelectedItem="{Binding SelectedProduct}"
-                                 Background="{StaticResource SurfaceDarkBrush}"
-                                 BorderThickness="0"
-                                 Height="180">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}"
+    <UserControl.Resources>
+        <!-- Pestañas en forma de píldora -->
+        <Style x:Key="TabPill" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Pill" Background="{StaticResource SurfaceMidBrush}" CornerRadius="16" Padding="16,7">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{TemplateBinding Content}" FontWeight="SemiBold"
+                                           Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+                                <Border x:Name="CountBox" Background="{StaticResource SurfaceLightBrush}" CornerRadius="9"
+                                        Padding="7,0" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{TemplateBinding Tag}" FontSize="11" FontWeight="Bold"
                                                Foreground="{StaticResource TextPrimaryBrush}" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="{StaticResource SidebarItemActiveBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="{StaticResource AccentBlueBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                                <Setter TargetName="CountBox" Property="Background" Value="#33FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
-                                    Visibility="{Binding IsProductEditorOpen, Converter={StaticResource BoolToVis}}">
-                            <Label Content="Nombre" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditProductName}" Margin="0,0,0,4" />
-                            <CheckBox Content="Activo" IsChecked="{Binding EditProductIsActive}"
-                                      Margin="0,0,0,8" />
-                            <WrapPanel>
+        <!-- Cada sección se muestra solo si su pestaña (en Tag) está marcada -->
+        <Style x:Key="SectionHost" TargetType="Grid">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag.IsChecked, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="1,0,0,3" />
+        </Style>
+
+        <Style x:Key="ItemSecondary" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        </Style>
+
+        <Style x:Key="InactiveBadge" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="8,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsActive}" Value="False">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CatalogItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Card" Background="{StaticResource SurfaceMidBrush}" BorderBrush="Transparent"
+                                BorderThickness="2" CornerRadius="5" Padding="12,8">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{StaticResource SidebarItemHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource AccentBlueBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ListCaption" TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="EditorTitle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+
+        <Style x:Key="SmallAction" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+        </Style>
+
+        <!-- Aviso cuando aún no se abrió el editor -->
+        <Style x:Key="EditorHint" TargetType="StackPanel">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ENCABEZADO -->
+        <StackPanel Margin="0,0,0,12">
+            <TextBlock Text="Catálogos" Style="{StaticResource SectionTitle}" FontSize="20" Margin="0" />
+            <TextBlock Text="Los listados que se eligen al registrar un pesaje: productos, empresas y conductores. Los operadores son los usuarios con rol Operador (menú Usuarios)."
+                       FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+        </StackPanel>
+
+        <!-- PESTAÑAS -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <RadioButton x:Name="TabProducts" Content="Productos" Tag="{Binding Products.Count}" IsChecked="True"
+                         GroupName="CatalogTabs" Style="{StaticResource TabPill}" />
+            <RadioButton x:Name="TabCompanies" Content="Empresas" Tag="{Binding Companies.Count}"
+                         GroupName="CatalogTabs" Style="{StaticResource TabPill}" />
+            <RadioButton x:Name="TabDrivers" Content="Conductores" Tag="{Binding Drivers.Count}"
+                         GroupName="CatalogTabs" Style="{StaticResource TabPill}" />
+        </StackPanel>
+
+        <!-- CONTENIDO: lista a la izquierda, editor a la derecha -->
+        <Grid Grid.Row="2">
+
+            <!-- ═══════ PRODUCTOS ═══════ -->
+            <Grid Style="{StaticResource SectionHost}" Tag="{Binding ElementName=TabProducts}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="340" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardPanel}" Margin="0,0,12,0">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <TextBlock Text="Productos" Style="{StaticResource ListCaption}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Eliminar" Command="{Binding DeleteProductCommand}"
+                                        Style="{StaticResource DangerButton}" Padding="12,6" Margin="0"
+                                        IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullToBool}}" />
+                                <Button Content="Editar" Command="{Binding EditProductCommand}" Style="{StaticResource SmallAction}"
+                                        IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullToBool}}" />
+                                <Button Content="＋ Nuevo" Command="{Binding NewProductCommand}"
+                                        Style="{StaticResource SmallAction}" Background="{StaticResource AccentGreenBrush}" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid>
+                            <ListBox ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}"
+                                     ItemContainerStyle="{StaticResource CatalogItem}"
+                                     Background="Transparent" BorderThickness="0"
+                                     ToolTip="Doble clic para editar">
+                                <ListBox.InputBindings>
+                                    <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditProductCommand}" />
+                                </ListBox.InputBindings>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Border Grid.Column="1" Style="{StaticResource InactiveBadge}">
+                                                <TextBlock Text="Inactivo" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="Aún no hay productos. Pulse «＋ Nuevo» para crear el primero."
+                                       Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" IsHitTestVisible="False" TextWrapping="Wrap"
+                                       Visibility="{Binding Products.Count, Converter={StaticResource EmptyToVis}}" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardPanel}">
+                    <Grid>
+                        <StackPanel Visibility="{Binding IsProductEditorOpen, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Editar producto">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EditorTitle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedProduct}" Value="{x:Null}">
+                                                <Setter Property="Text" Value="Nuevo producto" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource FieldLabel}">
+                                <Run Text="Nombre" /><Run Text=" *" Foreground="{StaticResource AccentRedBrush}" />
+                            </TextBlock>
+                            <TextBox Text="{Binding EditProductName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
+                            <CheckBox Content="Activo" IsChecked="{Binding EditProductIsActive}" Margin="0,0,0,2"
+                                      ToolTip="Los inactivos dejan de ofrecerse al pesar, pero se conservan en el historial" />
+                            <TextBlock Text="* Obligatorio" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,12" />
+                            <StackPanel Orientation="Horizontal">
                                 <Button Content="Guardar" Command="{Binding SaveProductCommand}"
                                         Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
                                 <Button Content="Cancelar" Command="{Binding CancelProductEditCommand}"
-                                        Style="{StaticResource WarningButton}" />
-                            </WrapPanel>
+                                        Style="{StaticResource PrimaryButton}" Background="{StaticResource TextMutedBrush}" />
+                            </StackPanel>
                         </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
+                        <StackPanel Style="{StaticResource EditorHint}"
                                     Visibility="{Binding IsProductEditorOpen, Converter={StaticResource InverseBoolToVis}}">
-                            <Button Content="Nuevo" Command="{Binding NewProductCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6" />
-                            <Button Content="Editar" Command="{Binding EditProductCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"
-                                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullToBool}}" />
-                            <Button Content="Eliminar" Command="{Binding DeleteProductCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullToBool}}" />
+                            <TextBlock Text="Seleccione un producto para editarlo o cree uno nuevo."
+                                       TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
                         </StackPanel>
                     </Grid>
-                </StackPanel>
-            </Border>
+                </Border>
+            </Grid>
 
-            <!-- COMPANIES -->
-            <Border Style="{StaticResource CardPanel}">
-                <StackPanel>
-                    <TextBlock Text="Empresas" Style="{StaticResource SectionTitle}" />
+            <!-- ═══════ EMPRESAS ═══════ -->
+            <Grid Style="{StaticResource SectionHost}" Tag="{Binding ElementName=TabCompanies}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="340" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardPanel}" Margin="0,0,12,0">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <TextBlock Text="Empresas" Style="{StaticResource ListCaption}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Eliminar" Command="{Binding DeleteCompanyCommand}"
+                                        Style="{StaticResource DangerButton}" Padding="12,6" Margin="0"
+                                        IsEnabled="{Binding SelectedCompany, Converter={StaticResource NotNullToBool}}" />
+                                <Button Content="Editar" Command="{Binding EditCompanyCommand}" Style="{StaticResource SmallAction}"
+                                        IsEnabled="{Binding SelectedCompany, Converter={StaticResource NotNullToBool}}" />
+                                <Button Content="＋ Nueva" Command="{Binding NewCompanyCommand}"
+                                        Style="{StaticResource SmallAction}" Background="{StaticResource AccentGreenBrush}" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid>
+                            <ListBox ItemsSource="{Binding Companies}" SelectedItem="{Binding SelectedCompany}"
+                                     ItemContainerStyle="{StaticResource CatalogItem}"
+                                     Background="Transparent" BorderThickness="0"
+                                     ToolTip="Doble clic para editar">
+                                <ListBox.InputBindings>
+                                    <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditCompanyCommand}" />
+                                </ListBox.InputBindings>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding RUT, FallbackValue='Sin RUT', TargetNullValue='Sin RUT'}"
+                                                           Style="{StaticResource ItemSecondary}" />
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Style="{StaticResource InactiveBadge}">
+                                                <TextBlock Text="Inactiva" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="Aún no hay empresas. Pulse «＋ Nueva» para crear la primera."
+                                       Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" IsHitTestVisible="False" TextWrapping="Wrap"
+                                       Visibility="{Binding Companies.Count, Converter={StaticResource EmptyToVis}}" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardPanel}">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="250" />
-                        </Grid.ColumnDefinitions>
-
-                        <ListBox ItemsSource="{Binding Companies}"
-                                 SelectedItem="{Binding SelectedCompany}"
-                                 Background="{StaticResource SurfaceDarkBrush}"
-                                 BorderThickness="0"
-                                 Height="200">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}"
-                                                   Foreground="{StaticResource TextPrimaryBrush}" />
-                                        <TextBlock Text="{Binding RUT}"
-                                                   FontSize="11"
-                                                   Foreground="{StaticResource TextMutedBrush}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
-                                    Visibility="{Binding IsCompanyEditorOpen, Converter={StaticResource BoolToVis}}">
-                            <Label Content="Nombre" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditCompanyName}" Margin="0,0,0,4" />
-                            <Label Content="RUT" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditCompanyRut}" Margin="0,0,0,4" />
-                            <Label Content="Dirección" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditCompanyAddress}" Margin="0,0,0,4" />
-                            <Label Content="Teléfono" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditCompanyPhone}" Margin="0,0,0,4" />
-                            <CheckBox Content="Activo" IsChecked="{Binding EditCompanyIsActive}"
-                                      Margin="0,0,0,8" />
-                            <WrapPanel>
-                                <Button Content="Guardar" Command="{Binding SaveCompanyCommand}"
-                                        Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
-                                <Button Content="Cancelar" Command="{Binding CancelCompanyEditCommand}"
-                                        Style="{StaticResource WarningButton}" />
-                            </WrapPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding IsCompanyEditorOpen, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="Editar empresa">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource EditorTitle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedCompany}" Value="{x:Null}">
+                                                    <Setter Property="Text" Value="Nueva empresa" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource FieldLabel}">
+                                    <Run Text="Nombre" /><Run Text=" *" Foreground="{StaticResource AccentRedBrush}" />
+                                </TextBlock>
+                                <TextBox Text="{Binding EditCompanyName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
+                                <TextBlock Text="RUT" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding EditCompanyRut}" Margin="0,0,0,10" />
+                                <TextBlock Text="Dirección" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding EditCompanyAddress}" Margin="0,0,0,10" />
+                                <TextBlock Text="Teléfono" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding EditCompanyPhone}" Margin="0,0,0,10" />
+                                <CheckBox Content="Activa" IsChecked="{Binding EditCompanyIsActive}" Margin="0,0,0,2"
+                                          ToolTip="Las inactivas dejan de ofrecerse al pesar, pero se conservan en el historial" />
+                                <TextBlock Text="* Obligatorio" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Guardar" Command="{Binding SaveCompanyCommand}"
+                                            Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
+                                    <Button Content="Cancelar" Command="{Binding CancelCompanyEditCommand}"
+                                            Style="{StaticResource PrimaryButton}" Background="{StaticResource TextMutedBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                        <StackPanel Style="{StaticResource EditorHint}"
                                     Visibility="{Binding IsCompanyEditorOpen, Converter={StaticResource InverseBoolToVis}}">
-                            <Button Content="Nuevo" Command="{Binding NewCompanyCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6" />
-                            <Button Content="Editar" Command="{Binding EditCompanyCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"
-                                    IsEnabled="{Binding SelectedCompany, Converter={StaticResource NotNullToBool}}" />
-                            <Button Content="Eliminar" Command="{Binding DeleteCompanyCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    IsEnabled="{Binding SelectedCompany, Converter={StaticResource NotNullToBool}}" />
+                            <TextBlock Text="Seleccione una empresa para editarla o cree una nueva."
+                                       TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
                         </StackPanel>
                     </Grid>
-                </StackPanel>
-            </Border>
+                </Border>
+            </Grid>
 
-            <!-- OPERATORS -->
-            <Border Style="{StaticResource CardPanel}">
-                <StackPanel>
-                    <TextBlock Text="Operadores" Style="{StaticResource SectionTitle}" />
+            <!-- ═══════ CONDUCTORES ═══════ -->
+            <Grid Style="{StaticResource SectionHost}" Tag="{Binding ElementName=TabDrivers}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="340" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardPanel}" Margin="0,0,12,0">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <TextBlock Text="Conductores" Style="{StaticResource ListCaption}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Eliminar" Command="{Binding DeleteDriverCommand}"
+                                        Style="{StaticResource DangerButton}" Padding="12,6" Margin="0"
+                                        IsEnabled="{Binding SelectedDriver, Converter={StaticResource NotNullToBool}}" />
+                                <Button Content="Editar" Command="{Binding EditDriverCommand}" Style="{StaticResource SmallAction}"
+                                        IsEnabled="{Binding SelectedDriver, Converter={StaticResource NotNullToBool}}" />
+                                <Button Content="＋ Nuevo" Command="{Binding NewDriverCommand}"
+                                        Style="{StaticResource SmallAction}" Background="{StaticResource AccentGreenBrush}" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid>
+                            <ListBox ItemsSource="{Binding Drivers}" SelectedItem="{Binding SelectedDriver}"
+                                     ItemContainerStyle="{StaticResource CatalogItem}"
+                                     Background="Transparent" BorderThickness="0"
+                                     ToolTip="Doble clic para editar">
+                                <ListBox.InputBindings>
+                                    <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditDriverCommand}" />
+                                </ListBox.InputBindings>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" />
+                                                <TextBlock Style="{StaticResource ItemSecondary}">
+                                                    <Run Text="{Binding Company.Name, Mode=OneWay, FallbackValue='Sin empresa'}" /><Run Text="  ·  " /><Run Text="{Binding Phone, Mode=OneWay, FallbackValue='Sin teléfono', TargetNullValue='Sin teléfono'}" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Style="{StaticResource InactiveBadge}">
+                                                <TextBlock Text="Inactivo" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="Aún no hay conductores. Pulse «＋ Nuevo» para crear el primero."
+                                       Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" IsHitTestVisible="False" TextWrapping="Wrap"
+                                       Visibility="{Binding Drivers.Count, Converter={StaticResource EmptyToVis}}" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardPanel}">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="250" />
-                        </Grid.ColumnDefinitions>
-
-                        <ListBox ItemsSource="{Binding Operators}"
-                                 SelectedItem="{Binding SelectedOperator}"
-                                 Background="{StaticResource SurfaceDarkBrush}"
-                                 BorderThickness="0"
-                                 Height="200">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding FullName}"
-                                                   Foreground="{StaticResource TextPrimaryBrush}" />
-                                        <TextBlock FontSize="11"
-                                                   Foreground="{StaticResource TextMutedBrush}">
-                                            <Run Text="{Binding Company.Name}" />
-                                            <Run Text="—" />
-                                            <Run Text="{Binding Phone}" />
-                                        </TextBlock>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
-                                    Visibility="{Binding IsOperatorEditorOpen, Converter={StaticResource BoolToVis}}">
-                            <Label Content="Nombre" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditOperatorName}" Margin="0,0,0,4" />
-                            <Label Content="Teléfono" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditOperatorPhone}" Margin="0,0,0,4" />
-                            <Label Content="Empresa" Style="{StaticResource FormLabel}" />
-                            <ComboBox ItemsSource="{Binding Companies}"
-                                      SelectedItem="{Binding EditOperatorCompany}"
-                                      DisplayMemberPath="Name" Margin="0,0,0,4" />
-                            <CheckBox Content="Activo" IsChecked="{Binding EditOperatorIsActive}"
-                                      Margin="0,0,0,8" />
-                            <WrapPanel>
-                                <Button Content="Guardar" Command="{Binding SaveOperatorCommand}"
-                                        Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
-                                <Button Content="Cancelar" Command="{Binding CancelOperatorEditCommand}"
-                                        Style="{StaticResource WarningButton}" />
-                            </WrapPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
-                                    Visibility="{Binding IsOperatorEditorOpen, Converter={StaticResource InverseBoolToVis}}">
-                            <Button Content="Nuevo" Command="{Binding NewOperatorCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6" />
-                            <Button Content="Editar" Command="{Binding EditOperatorCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"
-                                    IsEnabled="{Binding SelectedOperator, Converter={StaticResource NotNullToBool}}" />
-                            <Button Content="Eliminar" Command="{Binding DeleteOperatorCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    IsEnabled="{Binding SelectedOperator, Converter={StaticResource NotNullToBool}}" />
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- DRIVERS -->
-            <Border Style="{StaticResource CardPanel}">
-                <StackPanel>
-                    <TextBlock Text="Conductores" Style="{StaticResource SectionTitle}" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="250" />
-                        </Grid.ColumnDefinitions>
-
-                        <ListBox ItemsSource="{Binding Drivers}"
-                                 SelectedItem="{Binding SelectedDriver}"
-                                 Background="{StaticResource SurfaceDarkBrush}"
-                                 BorderThickness="0"
-                                 Height="200">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding FullName}"
-                                                   Foreground="{StaticResource TextPrimaryBrush}" />
-                                        <TextBlock FontSize="11"
-                                                   Foreground="{StaticResource TextMutedBrush}">
-                                            <Run Text="{Binding Company.Name}" />
-                                            <Run Text="—" />
-                                            <Run Text="{Binding Phone}" />
-                                        </TextBlock>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
-                                    Visibility="{Binding IsDriverEditorOpen, Converter={StaticResource BoolToVis}}">
-                            <Label Content="Nombre" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditDriverName}" Margin="0,0,0,4" />
-                            <Label Content="Teléfono" Style="{StaticResource FormLabel}" />
-                            <TextBox Text="{Binding EditDriverPhone}" Margin="0,0,0,4" />
-                            <Label Content="Empresa" Style="{StaticResource FormLabel}" />
-                            <ComboBox ItemsSource="{Binding Companies}"
-                                      SelectedItem="{Binding EditDriverCompany}"
-                                      DisplayMemberPath="Name" Margin="0,0,0,4" />
-                            <CheckBox Content="Activo" IsChecked="{Binding EditDriverIsActive}"
-                                      Margin="0,0,0,8" />
-                            <WrapPanel>
-                                <Button Content="Guardar" Command="{Binding SaveDriverCommand}"
-                                        Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
-                                <Button Content="Cancelar" Command="{Binding CancelDriverEditCommand}"
-                                        Style="{StaticResource WarningButton}" />
-                            </WrapPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0"
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding IsDriverEditorOpen, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="Editar conductor">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource EditorTitle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedDriver}" Value="{x:Null}">
+                                                    <Setter Property="Text" Value="Nuevo conductor" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource FieldLabel}">
+                                    <Run Text="Nombre" /><Run Text=" *" Foreground="{StaticResource AccentRedBrush}" />
+                                </TextBlock>
+                                <TextBox Text="{Binding EditDriverName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
+                                <TextBlock Text="Teléfono" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding EditDriverPhone}" Margin="0,0,0,10" />
+                                <TextBlock Style="{StaticResource FieldLabel}">
+                                    <Run Text="Empresa" /><Run Text=" *" Foreground="{StaticResource AccentRedBrush}" />
+                                </TextBlock>
+                                <ComboBox ItemsSource="{Binding Companies}" SelectedItem="{Binding EditDriverCompany}"
+                                          DisplayMemberPath="Name" Margin="0,0,0,10" />
+                                <CheckBox Content="Activo" IsChecked="{Binding EditDriverIsActive}" Margin="0,0,0,2" />
+                                <TextBlock Text="* Obligatorio" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,8,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Guardar" Command="{Binding SaveDriverCommand}"
+                                            Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
+                                    <Button Content="Cancelar" Command="{Binding CancelDriverEditCommand}"
+                                            Style="{StaticResource PrimaryButton}" Background="{StaticResource TextMutedBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                        <StackPanel Style="{StaticResource EditorHint}"
                                     Visibility="{Binding IsDriverEditorOpen, Converter={StaticResource InverseBoolToVis}}">
-                            <Button Content="Nuevo" Command="{Binding NewDriverCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6" />
-                            <Button Content="Editar" Command="{Binding EditDriverCommand}"
-                                    Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"
-                                    IsEnabled="{Binding SelectedDriver, Converter={StaticResource NotNullToBool}}" />
-                            <Button Content="Eliminar" Command="{Binding DeleteDriverCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    IsEnabled="{Binding SelectedDriver, Converter={StaticResource NotNullToBool}}" />
+                            <TextBlock Text="Seleccione un conductor para editarlo o cree uno nuevo."
+                                       TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
                         </StackPanel>
                     </Grid>
-                </StackPanel>
-            </Border>
+                </Border>
+            </Grid>
 
-            <TextBlock Text="{Binding StatusMessage}"
-                       Style="{StaticResource StatusMessage}" />
-        </StackPanel>
-    </ScrollViewer>
+        </Grid>
+
+        <!-- ESTADO -->
+        <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" Style="{StaticResource StatusMessage}"
+                   Margin="2,6,0,0" />
+    </Grid>
 </UserControl>

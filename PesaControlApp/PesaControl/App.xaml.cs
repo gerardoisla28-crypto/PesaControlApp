@@ -62,7 +62,7 @@ namespace PesaControl
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"No se pudo inicializar la base de datos: {ex.Message}", "PesaControl", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"No se pudo inicializar la base de datos: {ex.Message}", "PesaControl Pro", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
         }

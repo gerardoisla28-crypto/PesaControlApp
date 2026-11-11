@@ -30,6 +30,42 @@ public partial class ControlsViewModel : ObservableObject, IUnsavedChanges
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private string _statusMessage = "Listo";
 
+    // ── Qué se muestra en la ventana de Pesaje (decisión manual del operador) ──
+    // Útil, por ejemplo, si el semáforo está quemado y no se sabría si está en rojo o verde.
+    private const string ShowBarrierKey = "weighing_show_barrier";
+    private const string ShowTrafficLightKey = "weighing_show_traffic_light";
+    private bool _loadingDisplayFlags;
+
+    [ObservableProperty] private bool _showBarrierInWeighing = true;
+    [ObservableProperty] private bool _showTrafficLightInWeighing = true;
+
+    partial void OnShowBarrierInWeighingChanged(bool value) => SaveDisplayFlag(ShowBarrierKey, value);
+    partial void OnShowTrafficLightInWeighingChanged(bool value) => SaveDisplayFlag(ShowTrafficLightKey, value);
+
+    private async void SaveDisplayFlag(string key, bool value)
+    {
+        if (_loadingDisplayFlags) return;
+        try { await _dbService.SetFlagAsync(key, value); }
+        catch (Exception ex) { StatusMessage = $"No se pudo guardar la preferencia: {ex.Message}"; }
+    }
+
+    private async Task LoadDisplayFlagsAsync()
+    {
+        try
+        {
+            var barrier = await _dbService.GetFlagAsync(ShowBarrierKey, true);
+            var light = await _dbService.GetFlagAsync(ShowTrafficLightKey, true);
+            _loadingDisplayFlags = true;
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                ShowBarrierInWeighing = barrier;
+                ShowTrafficLightInWeighing = light;
+            });
+        }
+        catch { /* si falla, se muestran ambas */ }
+        finally { _loadingDisplayFlags = false; }
+    }
+
     public ObservableCollection<ArduinoDeviceOption> Devices { get; } = new();
 
     // ── Cambios sin guardar ──
@@ -87,6 +123,7 @@ public partial class ControlsViewModel : ObservableObject, IUnsavedChanges
         BarrierVM.PropertyChanged += OnBarrierPropertyChanged;
 
         _ = LoadDevicesAsync();
+        _ = LoadDisplayFlagsAsync();
     }
 
     [RelayCommand]

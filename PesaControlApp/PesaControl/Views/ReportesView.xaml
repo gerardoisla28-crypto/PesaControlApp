@@ -8,236 +8,368 @@
              d:DesignHeight="800" d:DesignWidth="1100"
              Foreground="{StaticResource TextPrimaryBrush}">
     <UserControl.Resources>
+        <!-- Indicador (KPI): barra de color a la izquierda, etiqueta arriba, cifra grande -->
         <Style x:Key="StatCard" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource SurfaceMidBrush}" />
-            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="16,12" />
-            <Setter Property="Margin" Value="0,0,10,0" />
-            <Setter Property="MinWidth" Value="150" />
-            <Setter Property="BorderBrush" Value="{StaticResource SurfaceLightBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style x:Key="StatIcon" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="BorderThickness" Value="4,0,0,0" />
         </Style>
         <Style x:Key="StatValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="26" />
+            <Setter Property="FontSize" Value="28" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
         <Style x:Key="StatLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="Margin" Value="0,0,0,2" />
         </Style>
+
         <Style x:Key="ChartPanel" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource SurfaceMidBrush}" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="14,10" />
-            <Setter Property="Margin" Value="0,0,8,8" />
-            <Setter Property="BorderBrush" Value="{StaticResource SurfaceLightBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,12" />
         </Style>
         <Style x:Key="ChartTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="DockPanel.Dock" Value="Top" />
         </Style>
+        <Style x:Key="ChartSubtitle" TargetType="TextBlock">
+            <Setter Property="DockPanel.Dock" Value="Top" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="Margin" Value="0,1,0,8" />
+        </Style>
+
         <Style x:Key="FilterLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="Margin" Value="1,0,0,3" />
         </Style>
-        <Style x:Key="AxisInfo" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-            <Setter Property="Margin" Value="0,4,0,0" />
-            <Setter Property="FontFamily" Value="Consolas" />
+        <Style x:Key="FilterField" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,10,8" />
         </Style>
-        <Style x:Key="LegendItem" TargetType="Border">
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Padding" Value="6,2" />
-            <Setter Property="Margin" Value="0,0,6,0" />
+
+        <!-- Atajos de período -->
+        <Style x:Key="PresetButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+        </Style>
+
+        <Style x:Key="LegendDot" TargetType="Border">
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Margin" Value="0,0,5,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        <Style x:Key="LegendText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,14,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- Los botones de exportar se apagan si no hay datos -->
+        <Style x:Key="ExportButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Padding" Value="14,7" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasData}" Value="False">
+                    <Setter Property="IsEnabled" Value="False" />
+                    <Setter Property="ToolTip" Value="No hay pesajes en el período elegido" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- TOP SECTION: Filters + Export + Stats -->
-        <Border Style="{StaticResource CardPanel}">
+        <!-- 1. FILTROS Y EXPORTACIÓN: los gráficos se actualizan solos al cambiar un filtro -->
+        <Border Style="{StaticResource CardPanel}" Margin="0,0,0,10">
             <StackPanel>
-                <TextBlock Text="Reportes y Estadísticas" Style="{StaticResource SectionTitle}" />
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Margin" Value="0,0,0,10" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsChecked, ElementName=HeaderToggle}" Value="False">
+                                    <Setter Property="Margin" Value="0" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <!-- Filters -->
-                <WrapPanel Margin="0,0,0,10">
-                    <StackPanel Margin="0,0,6,0">
-                        <DatePicker SelectedDate="{Binding FilterFrom}"
-                                    Width="130" ToolTip="Desde" />
-                        <TextBlock Text="Desde" Style="{StaticResource FilterLabel}" />
+                    <!-- Título que despliega o pliega el encabezado (por defecto, desplegado) -->
+                    <StackPanel>
+                        <ToggleButton x:Name="HeaderToggle" IsChecked="True" Cursor="Hand"
+                                      Style="{x:Null}" Width="Auto" Height="Auto" MinWidth="0" MinHeight="0"
+                                      Padding="0" BorderThickness="0"
+                                      HorizontalAlignment="Left" Focusable="False"
+                                      ToolTip="Mostrar u ocultar los filtros">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                                        <TextBlock x:Name="Arrow" Text="▼" FontSize="12"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center" Margin="0,0,10,0" />
+                                        <TextBlock Text="Reportes y Estadísticas" Style="{StaticResource SectionTitle}" Margin="0" />
+                                    </StackPanel>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="False">
+                                            <Setter TargetName="Arrow" Property="Text" Value="▶" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Arrow" Property="Foreground" Value="{StaticResource AccentBlueBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <TextBlock Text="Los gráficos se actualizan al cambiar un filtro. Solo los pesajes completados suman kilogramos."
+                                   FontSize="11" Margin="22,2,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsChecked, ElementName=HeaderToggle}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
-                    <StackPanel Margin="0,0,6,0">
-                        <DatePicker SelectedDate="{Binding FilterTo}"
-                                    Width="130" ToolTip="Hasta" />
-                        <TextBlock Text="Hasta" Style="{StaticResource FilterLabel}" />
-                    </StackPanel>
-                    <StackPanel Margin="0,0,6,0">
-                        <ComboBox ItemsSource="{Binding Products}"
-                                  SelectedItem="{Binding FilterProduct}"
-                                  DisplayMemberPath="Name"
-                                  Width="160" ToolTip="Filtrar por producto" />
-                        <TextBlock Text="Producto" Style="{StaticResource FilterLabel}" />
-                    </StackPanel>
-                    <StackPanel Margin="0,0,6,0">
-                        <ComboBox ItemsSource="{Binding Companies}"
-                                  SelectedItem="{Binding FilterCompany}"
-                                  DisplayMemberPath="Name"
-                                  Width="160" ToolTip="Filtrar por empresa" />
-                        <TextBlock Text="Empresa" Style="{StaticResource FilterLabel}" />
-                    </StackPanel>
-                </WrapPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding StatusMessage}"
+                               Style="{StaticResource StatusMessage}" Margin="0" VerticalAlignment="Center" />
+                </Grid>
 
-                <!-- Export buttons -->
-                <WrapPanel Margin="0,0,0,12">
-                    <Button Content="Excel" Command="{Binding ExportToExcelCommand}"
-                            Style="{StaticResource SuccessButton}" Margin="0,0,6,0" />
-                    <Button Content="PDF" Command="{Binding ExportToPdfCommand}"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,6,0" />
-                    <TextBlock Text="{Binding StatusMessage}"
-                               Style="{StaticResource StatusMessage}" VerticalAlignment="Center" />
-                </WrapPanel>
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsChecked, ElementName=HeaderToggle}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <!-- Stat cards -->
-                <WrapPanel>
-                    <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Text="📊" Style="{StaticResource StatIcon}" />
-                            <TextBlock Text="{Binding TotalRecords}" Style="{StaticResource StatValue}"
-                                       Foreground="{StaticResource AccentBlueBrush}" />
-                            <TextBlock Text="Total Pesajes" Style="{StaticResource StatLabel}" />
+                    <WrapPanel>
+                        <StackPanel Style="{StaticResource FilterField}">
+                            <TextBlock Text="Desde" Style="{StaticResource FilterLabel}" />
+                            <DatePicker SelectedDate="{Binding FilterFrom}" Width="130" ToolTip="Desde esta fecha" />
                         </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Text="⚖" Style="{StaticResource StatIcon}" />
-                            <TextBlock Text="{Binding TotalNetWeight}" Style="{StaticResource StatValue}"
-                                       Foreground="{StaticResource AccentGreenBrush}" />
-                            <TextBlock Text="Peso Neto Total" Style="{StaticResource StatLabel}" />
+                        <StackPanel Style="{StaticResource FilterField}">
+                            <TextBlock Text="Hasta" Style="{StaticResource FilterLabel}" />
+                            <DatePicker SelectedDate="{Binding FilterTo}" Width="130" ToolTip="Hasta esta fecha" />
                         </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Text="📈" Style="{StaticResource StatIcon}" />
-                            <TextBlock Text="{Binding AvgNetWeight}" Style="{StaticResource StatValue}"
-                                       Foreground="{StaticResource AccentOrangeBrush}" />
-                            <TextBlock Text="Promedio por Pesaje" Style="{StaticResource StatLabel}" />
+                        <StackPanel Style="{StaticResource FilterField}">
+                            <TextBlock Text="Período rápido" Style="{StaticResource FilterLabel}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Hoy" Command="{Binding SetPeriodCommand}" CommandParameter="today"
+                                        Style="{StaticResource PresetButton}" />
+                                <Button Content="7 días" Command="{Binding SetPeriodCommand}" CommandParameter="7"
+                                        Style="{StaticResource PresetButton}" />
+                                <Button Content="30 días" Command="{Binding SetPeriodCommand}" CommandParameter="30"
+                                        Style="{StaticResource PresetButton}" />
+                                <Button Content="Este mes" Command="{Binding SetPeriodCommand}" CommandParameter="month"
+                                        Style="{StaticResource PresetButton}" />
+                            </StackPanel>
                         </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Text="📅" Style="{StaticResource StatIcon}" />
-                            <TextBlock Text="{Binding PeriodText}" Style="{StaticResource StatValue}"
-                                       FontSize="15" Foreground="{StaticResource AccentBlueBrush}" />
-                            <TextBlock Text="Período" Style="{StaticResource StatLabel}" />
+                        <StackPanel Style="{StaticResource FilterField}">
+                            <TextBlock Text="Producto" Style="{StaticResource FilterLabel}" />
+                            <ComboBox ItemsSource="{Binding Products}"
+                                      SelectedItem="{Binding FilterProduct}"
+                                      DisplayMemberPath="Name"
+                                      Width="160" ToolTip="Filtrar por producto" />
                         </StackPanel>
-                    </Border>
-                </WrapPanel>
+                        <StackPanel Style="{StaticResource FilterField}">
+                            <TextBlock Text="Empresa" Style="{StaticResource FilterLabel}" />
+                            <ComboBox ItemsSource="{Binding Companies}"
+                                      SelectedItem="{Binding FilterCompany}"
+                                      DisplayMemberPath="Name"
+                                      Width="160" ToolTip="Filtrar por empresa" />
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource FilterField}" VerticalAlignment="Bottom">
+                            <Button Content="Limpiar filtros" Command="{Binding ClearFiltersCommand}"
+                                    Style="{StaticResource PresetButton}" Padding="12,6" Margin="0" />
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <!-- Exportar lo que se ve en pantalla -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="12,0,0,0">
+                        <TextBlock Text="Exportar" Style="{StaticResource FilterLabel}" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Excel" Command="{Binding ExportToExcelCommand}"
+                                    ToolTip="Exporta los pesajes del período y filtros actuales a Excel"
+                                    Style="{StaticResource ExportButton}"
+                                    Background="{StaticResource AccentGreenBrush}" />
+                            <Button Content="PDF" Command="{Binding ExportToPdfCommand}"
+                                    ToolTip="Exporta los pesajes del período y filtros actuales a PDF"
+                                    Style="{StaticResource ExportButton}" Margin="0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
             </StackPanel>
         </Border>
 
-        <!-- CHARTS SECTION -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <Grid Margin="0,4,0,0">
+        <!-- 2. INDICADORES -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource StatCard}" BorderBrush="{StaticResource AccentBlueBrush}">
+                <StackPanel>
+                    <TextBlock Text="TOTAL DE PESAJES" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding TotalRecords}" Style="{StaticResource StatValue}"
+                               Foreground="{StaticResource AccentBlueBrush}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource StatCard}" BorderBrush="{StaticResource AccentGreenBrush}">
+                <StackPanel>
+                    <TextBlock Text="PESO NETO TOTAL" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding TotalNetWeight}" Style="{StaticResource StatValue}"
+                               Foreground="{StaticResource AccentGreenBrush}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="4" Style="{StaticResource StatCard}" BorderBrush="{StaticResource AccentOrangeBrush}">
+                <StackPanel>
+                    <TextBlock Text="PROMEDIO POR PESAJE" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding AvgNetWeight}" Style="{StaticResource StatValue}"
+                               Foreground="{StaticResource AccentOrangeBrush}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="6" Style="{StaticResource StatCard}" BorderBrush="{StaticResource AccentTealBrush}">
+                <StackPanel>
+                    <TextBlock Text="PERÍODO" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding PeriodText}" Style="{StaticResource StatValue}"
+                               FontSize="20" Margin="0,8,0,0" Foreground="{StaticResource AccentTealBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 3. AVISO cuando el filtro no devuelve datos -->
+        <Border Grid.Row="2" Background="{StaticResource SurfaceMidBrush}" CornerRadius="8"
+                BorderBrush="{StaticResource AccentOrangeBrush}" BorderThickness="4,0,0,0"
+                Padding="14,10" Margin="0,0,0,10"
+                Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVis}}">
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}">
+                <Run Text="No hay pesajes para este período y filtros." FontWeight="SemiBold" />
+                <Run Text="Amplíe las fechas o pulse «Limpiar filtros»." />
+            </TextBlock>
+        </Border>
+
+        <!-- 4. GRÁFICOS -->
+        <Grid Grid.Row="3">
+            <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="10" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="10" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Daily chart -->
+                <!-- Pesajes por día -->
                 <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource ChartPanel}">
-                    <StackPanel>
-                        <TextBlock Text="Pesajes por Día" Style="{StaticResource ChartTitle}" />
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="Pesajes por día" Style="{StaticResource ChartTitle}" />
+                        <TextBlock Text="Cantidad de pesajes en cada fecha" Style="{StaticResource ChartSubtitle}" />
                         <lvc:CartesianChart Series="{Binding DailySeries}"
                                             XAxes="{Binding DailyXAxes}"
                                             YAxes="{Binding DailyYAxes}"
                                             ZoomMode="X"
-                                            Height="280"
+                                            MinHeight="120"
                                             TooltipPosition="Top"
                                             Background="Transparent" />
-                        <TextBlock Text="Eje X: Fecha — Eje Y: Cantidad de pesajes"
-                                   Style="{StaticResource AxisInfo}" />
-                    </StackPanel>
+                    </DockPanel>
                 </Border>
 
-                <!-- Product chart -->
-                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource ChartPanel}">
-                    <StackPanel>
-                        <TextBlock Text="Kilogramos por Producto (top 10)" Style="{StaticResource ChartTitle}" />
+                <!-- Kilogramos por producto -->
+                <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource ChartPanel}">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="Kilogramos por producto" Style="{StaticResource ChartTitle}" />
+                        <TextBlock Text="Los 10 con más peso neto" Style="{StaticResource ChartSubtitle}" />
                         <lvc:CartesianChart Series="{Binding ProductSeries}"
                                             XAxes="{Binding ProductXAxes}"
                                             YAxes="{Binding ProductYAxes}"
-                                            Height="280"
+                                            MinHeight="120"
                                             TooltipPosition="Top"
                                             Background="Transparent" />
-                        <TextBlock Text="Eje X: Kilogramos (kg) — Eje Y: Producto"
-                                   Style="{StaticResource AxisInfo}" />
-                    </StackPanel>
+                    </DockPanel>
                 </Border>
 
-                <!-- Status pie chart -->
-                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource ChartPanel}">
-                    <StackPanel>
-                        <TextBlock Text="Distribución por Estado" Style="{StaticResource ChartTitle}" />
+                <!-- Distribución por estado -->
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource ChartPanel}">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="Distribución por estado" Style="{StaticResource ChartTitle}" />
+                        <TextBlock Text="Cantidad y porcentaje de pesajes por estado" Style="{StaticResource ChartSubtitle}" />
+                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0" HorizontalAlignment="Center">
+                            <Border Background="{StaticResource AccentGreenBrush}" Style="{StaticResource LegendDot}" />
+                            <TextBlock Text="Completado" Style="{StaticResource LegendText}" />
+                            <Border Background="{StaticResource AccentOrangeBrush}" Style="{StaticResource LegendDot}" />
+                            <TextBlock Text="Pesando entrada" Style="{StaticResource LegendText}" />
+                            <Border Background="{StaticResource AccentBlueBrush}" Style="{StaticResource LegendDot}" />
+                            <TextBlock Text="Pesando salida" Style="{StaticResource LegendText}" />
+                            <Border Background="{StaticResource AccentRedBrush}" Style="{StaticResource LegendDot}" />
+                            <TextBlock Text="Cancelado" Style="{StaticResource LegendText}" Margin="0" />
+                        </WrapPanel>
                         <lvc:PieChart Series="{Binding StatusSeries}"
-                                      Height="260"
+                                      MinHeight="120"
                                       MaxAngle="360"
                                       MinValue="0"
                                       TooltipPosition="Top"
                                       Background="Transparent" />
-                        <WrapPanel Margin="0,6,0,0" HorizontalAlignment="Center">
-                            <Border Background="#4CAF50" Style="{StaticResource LegendItem}" />
-                            <TextBlock Text="Completado" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" />
-                            <Border Background="#FF9800" Style="{StaticResource LegendItem}" />
-                            <TextBlock Text="Pesando entrada" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" />
-                            <Border Background="#2196F3" Style="{StaticResource LegendItem}" />
-                            <TextBlock Text="Pesando salida" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" />
-                            <Border Background="#F44336" Style="{StaticResource LegendItem}" />
-                            <TextBlock Text="Cancelado" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="11" Margin="0,0,0,0" VerticalAlignment="Center" />
-                        </WrapPanel>
-                    </StackPanel>
+                    </DockPanel>
                 </Border>
 
-                <!-- Company chart -->
-                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource ChartPanel}">
-                    <StackPanel>
-                        <TextBlock Text="Kilogramos por Empresa (top 10)" Style="{StaticResource ChartTitle}" />
+                <!-- Kilogramos por empresa -->
+                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource ChartPanel}">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="Kilogramos por empresa" Style="{StaticResource ChartTitle}" />
+                        <TextBlock Text="Las 10 con más peso neto" Style="{StaticResource ChartSubtitle}" />
                         <lvc:CartesianChart Series="{Binding CompanySeries}"
                                             XAxes="{Binding CompanyXAxes}"
                                             YAxes="{Binding CompanyYAxes}"
-                                            Height="280"
+                                            MinHeight="120"
                                             TooltipPosition="Top"
                                             Background="Transparent" />
-                        <TextBlock Text="Eje X: Kilogramos (kg) — Eje Y: Empresa"
-                                   Style="{StaticResource AxisInfo}" />
-                    </StackPanel>
+                    </DockPanel>
                 </Border>
             </Grid>
-        </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>

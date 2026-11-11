@@ -15,7 +15,6 @@ public abstract class AppDbContext : DbContext
     public DbSet<BarrierConfig> BarrierConfigs => Set<BarrierConfig>();
     public DbSet<TrafficLightConfig> TrafficLightConfigs => Set<TrafficLightConfig>();
     public DbSet<TicketTemplate> TicketTemplates => Set<TicketTemplate>();
-    public DbSet<PlateRecord> PlateRecords => Set<PlateRecord>();
     public DbSet<Operator> Operators => Set<Operator>();
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<ScaleConfig> ScaleConfigs => Set<ScaleConfig>();
@@ -179,19 +178,6 @@ public abstract class AppDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Header).HasMaxLength(500);
             entity.Property(e => e.Footer).HasMaxLength(500);
-        });
-
-        modelBuilder.Entity<PlateRecord>(entity =>
-        {
-            entity.ToTable("PlateRecords");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Plate).HasMaxLength(20).IsRequired();
-            entity.Property(e => e.Region).HasMaxLength(5);
-            entity.Property(e => e.Source).HasMaxLength(30);
-            entity.HasIndex(e => e.Plate);
-            entity.HasIndex(e => e.Timestamp);
-            entity.HasOne(e => e.Camera).WithMany().HasForeignKey(e => e.CameraConfigId).OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(e => e.WeighingRecord).WithMany().HasForeignKey(e => e.WeighingRecordId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ScaleConfig>(entity =>

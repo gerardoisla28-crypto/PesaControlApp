@@ -36,6 +36,7 @@ public partial class ReportesViewModel : ObservableObject
     [ObservableProperty] private string _totalNetWeight = "0 kg";
     [ObservableProperty] private string _avgNetWeight = "0 kg";
     [ObservableProperty] private string _periodText = "";
+    [ObservableProperty] private bool _hasData;
 
     [ObservableProperty] private ISeries[] _dailySeries = [];
     [ObservableProperty] private Axis[] _dailyXAxes = [];
@@ -81,6 +82,10 @@ public partial class ReportesViewModel : ObservableObject
                 Companies.Clear();
                 Companies.Add(new Company { Id = 0, Name = "Todas" });
                 foreach (var c in companies.OrderBy(x => x.Name)) Companies.Add(c);
+
+                // "Todos" / "Todas" quedan elegidos desde el inicio, no listas en blanco.
+                FilterProduct = Products[0];
+                FilterCompany = Companies[0];
             });
 
             var repo = new WeighingRepository(ctx);
@@ -99,6 +104,32 @@ public partial class ReportesViewModel : ObservableObject
                 StatusMessage = $"Error al cargar datos: {ex.Message}";
             });
         }
+    }
+
+    // Atajos de período: "today", "7", "30" (últimos días, hoy incluido) y "month" (desde el 1 del mes).
+    [RelayCommand]
+    private void SetPeriod(string? key)
+    {
+        var today = DateTime.Today;
+        DateTime? from = key switch
+        {
+            "today" => today,
+            "7" => today.AddDays(-6),
+            "30" => today.AddDays(-29),
+            "month" => new DateTime(today.Year, today.Month, 1),
+            _ => null
+        };
+        FilterFrom = from;
+        FilterTo = from is null ? null : today;
+    }
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        FilterFrom = null;
+        FilterTo = null;
+        FilterProduct = Products.FirstOrDefault();
+        FilterCompany = Companies.FirstOrDefault();
     }
 
     [RelayCommand]
@@ -130,6 +161,7 @@ public partial class ReportesViewModel : ObservableObject
 
         // Totales y promedio con los decimales del visor (el mayor entre los pesajes del periodo).
         var decimals = completed.Count > 0 ? completed.Max(r => r.WeightDecimals) : 0;
+        HasData = records.Count > 0;
         TotalRecords = records.Count.ToString("N0");
         TotalNetWeight = WeightFormat.FormatKg(completed.Sum(r => r.NetWeight), decimals);
         AvgNetWeight = completed.Count > 0

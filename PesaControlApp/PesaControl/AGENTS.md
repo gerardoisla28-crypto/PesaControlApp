@@ -1,6 +1,6 @@
 ﻿# PesaControl
 
-App WPF de control industrial (.NET 10) para estaciones de pesaje de camiones: lectura de báscula, cámaras/DVR, ANPR de placas, barrera, semáforo y tickets. Solución de 5 proyectos en directorios hermanos, más un sketch Arduino.
+App WPF de control industrial (.NET 10) para estaciones de pesaje de camiones: lectura de báscula, cámaras/DVR, barrera, semáforo y tickets. Solución de 5 proyectos en directorios hermanos, más un sketch Arduino.
 
 ## Estructura
 
@@ -21,7 +21,6 @@ Cadena de dependencias: `UI → Core, Data → Core`; `Provisioner → Data`.
 - Entity Framework Core: SQLite como almacén local de cada puesto y PostgreSQL (Npgsql) como servidor central (`DatabaseService`, `AppDbContext`, `LocalDbContext`, `CentralDbContext`)
 - System.IO.Ports (serial RS232/RS485/USB), NModbus (Modbus RTU/TCP)
 - LiveCharts2 (gráficos), QuestPDF (PDF), ClosedXML (Excel)
-- ANPR: PlateRecognizer (cloud, `PlateRecognizerAnprService`)
 - Cámaras: LibVLCSharp / OpenCvSharp (RTSP/USB) y DVR Dahua (`DahuaDvrService`, `DahuaHttpClient`)
 - Argon2id (Konscious) para hash de contraseñas (`Core/Security`)
 
@@ -53,5 +52,6 @@ No hay proyectos de pruebas automatizadas.
 - `AuthService` se instancia manualmente (`new AuthService()`). Migrar a inyección de dependencias en fases posteriores.
 - Las contraseñas usan Argon2id (`Core/Security`), junto con las políticas de contraseña, usuario y nombre.
 - `AppDbContext` es la base abstracta con el modelo compartido. La app solo usa `LocalDbContext` (SQLite, archivo en `%LocalAppData%/PesaControl/pesacontrol.db`, o la ruta de `PESACONTROL_DB_PATH`). `CentralDbContext` (PostgreSQL) es el lado servidor y aún no lo usa la app: se conectará con la sincronización (ver `PLAN_MEJORAS.md`).
+- Antes de la primera entrega las migraciones se aplastaron en una sola `InitialCreate` por proveedor. Desde la primera entrega quedan congeladas: nunca se editan ni se borran, solo se agregan nuevas.
 - Migraciones: `dotnet dotnet-ef migrations add Nombre --context LocalDbContext --project PesaControl.data --output-dir Migrations/Sqlite` (y `--context CentralDbContext --output-dir Migrations/Postgres` para PostgreSQL). Ambos contextos deben generar migraciones cuando cambie el modelo.
-- `PlateRecord.Source` menciona PaddleOCR, pero no hay implementación local de PaddleOCR en el código; solo PlateRecognizer y entrada manual.
+- Se quitó el reconocimiento automático de patentes (ANPR) y con él la tabla `PlateRecords` . Los respaldos antiguos que traigan patentes se importan igual: ese dato se ignora.

@@ -1,4 +1,4 @@
-# Abre Control de Peso en modo demostración: base aparte, báscula simulada y datos ficticios chilenos.
+# Abre PesaControl Pro en modo demostración: base aparte, báscula simulada y datos ficticios chilenos.
 # No toca la base real del puesto (%LocalAppData%\PesaControl).
 #   .\run-demo.ps1          abre la demo (la primera vez crea los datos de los últimos 30 días)
 #   .\run-demo.ps1 -Reset   borra la base de demostración y la crea de nuevo con fechas al día

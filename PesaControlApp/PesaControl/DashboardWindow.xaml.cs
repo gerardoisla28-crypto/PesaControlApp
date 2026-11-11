@@ -43,6 +43,7 @@ public partial class DashboardWindow : Window
         var exportImport = new ExportImportService(dbService);
 
         var weighingVm = new WeighingViewModel(_scaleManager, dataService, dbService);
+        weighingVm.SetCurrentUser(currentUser);
         var barrierVm = new BarrierViewModel(dbService);
         var trafficLightVm = new TrafficLightViewModel(dbService);
 
@@ -54,12 +55,6 @@ public partial class DashboardWindow : Window
         var controlsVm = new ControlsViewModel(dbService, barrierVm, trafficLightVm);
         var settingsVm = new SettingsViewModel(dbService, _scaleManager, weighingVm, exportImport);
         var catalogsVm = new CatalogsViewModel(dbService);
-
-        var sysDict = sysConfigs.ToDictionary(c => c.Key, c => c.Value);
-        var apiKey = sysDict.GetValueOrDefault("platerecognizer_api_key", "");
-        IAnprService? anprService = string.IsNullOrWhiteSpace(apiKey)
-            ? null
-            : new PlateRecognizerAnprService(apiKey);
 
         var dvrService = new DahuaDvrService();
 
@@ -75,6 +70,9 @@ public partial class DashboardWindow : Window
             CurrentViewModel = weighingVm
         };
 
+        // Cámaras y Control viven dentro de Configuración (solo el administrador las ve)
+        settingsVm.ControlsVM = controlsVm;
+
         DataContext = _dashboardVm;
         Closing += OnWindowClosing;
 
@@ -84,7 +82,7 @@ public partial class DashboardWindow : Window
             try { await _scaleManager.DisconnectAllAsync(); } catch { }
         });
 
-        _ = InitializeCameraAsync(dbService, weighingVm, controlsVm, anprService, dvrService);
+        _ = InitializeCameraAsync(dbService, weighingVm, controlsVm, dvrService);
         _ = _dashboardVm.LoadModuleConfigAsync(dbService);
     }
 
@@ -110,7 +108,7 @@ public partial class DashboardWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"No se pudo cerrar la ventana: {ex.Message}", "PesaControl", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"No se pudo cerrar la ventana: {ex.Message}", "PesaControl Pro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         });
     }
@@ -157,19 +155,15 @@ public partial class DashboardWindow : Window
         }
     }
 
-    private async Task InitializeCameraAsync(DatabaseService dbService, WeighingViewModel weighingVm, ControlsViewModel controlsVm, IAnprService? anprService, IDvrService dvrService)
+    private async Task InitializeCameraAsync(DatabaseService dbService, WeighingViewModel weighingVm, ControlsViewModel controlsVm, IDvrService dvrService)
     {
         var cameraService = new CameraService();
         weighingVm.SetCameraService(cameraService);
 
-        var cameraVm = new CameraViewModel(cameraService, dvrService, anprService, dbService);
-
-        cameraVm.PlateDetected += (_, plate) =>
-        {
-            weighingVm.LicensePlate = plate;
-        };
+        var cameraVm = new CameraViewModel(cameraService, dvrService, dbService);
 
         _dashboardVm.CameraVM = cameraVm;
+        _dashboardVm.SettingsVM!.CameraVM = cameraVm;
         weighingVm.CameraVM = cameraVm;
         weighingVm.ControlsVM = controlsVm;
     }

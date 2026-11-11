@@ -258,52 +258,6 @@ namespace PesaControl.Data.Migrations.Sqlite
                     b.ToTable("Operators", (string)null);
                 });
 
-            modelBuilder.Entity("PesaControl.Core.Models.PlateRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("CameraConfigId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("Confidence")
-                        .HasColumnType("REAL");
-
-                    b.Property<string>("Plate")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Region")
-                        .IsRequired()
-                        .HasMaxLength(5)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("WeighingRecordId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CameraConfigId");
-
-                    b.HasIndex("Plate");
-
-                    b.HasIndex("Timestamp");
-
-                    b.HasIndex("WeighingRecordId");
-
-                    b.ToTable("PlateRecords", (string)null);
-                });
-
             modelBuilder.Entity("PesaControl.Core.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -715,23 +669,6 @@ namespace PesaControl.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Company");
-                });
-
-            modelBuilder.Entity("PesaControl.Core.Models.PlateRecord", b =>
-                {
-                    b.HasOne("PesaControl.Core.Models.CameraConfig", "Camera")
-                        .WithMany()
-                        .HasForeignKey("CameraConfigId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("PesaControl.Core.Models.WeighingRecord", "WeighingRecord")
-                        .WithMany()
-                        .HasForeignKey("WeighingRecordId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Camera");
-
-                    b.Navigation("WeighingRecord");
                 });
 
             modelBuilder.Entity("PesaControl.Core.Models.WeighingRecord", b =>

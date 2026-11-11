@@ -43,7 +43,7 @@ public partial class RegistrosViewModel : ObservableObject
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<Company> Companies { get; } = new();
 
-    public RegistrosViewModel(DatabaseService dbService, string role = UserRoles.Viewer)
+    public RegistrosViewModel(DatabaseService dbService, string role = UserRoles.Operator)
     {
         _dbService = dbService;
         var ctx = dbService.CreateContext();
@@ -196,7 +196,7 @@ public partial class RegistrosViewModel : ObservableObject
             if (fullRecord == null) return;
 
             var configs = await new Repository<SystemConfig>(ctx).GetAllAsync();
-            var header = configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PesaControl";
+            var header = configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PESACONTROL PRO";
             var template = new TicketTemplate { Header = header };
 
             var dlg = new PrintDialog();

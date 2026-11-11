@@ -8,6 +8,87 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Foreground="{StaticResource TextPrimaryBrush}">
+
+    <UserControl.Resources>
+        <!-- Etiqueta sobre cada campo del formulario -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="1,0,0,3" />
+        </Style>
+
+        <!-- Título pequeño de tarjeta -->
+        <Style x:Key="CardCaption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <!-- Insignia de estado del pesaje (misma paleta que Registros) -->
+        <Style x:Key="StatusBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                    <Setter Property="Background" Value="{StaticResource AccentGreenBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="WeighingIn">
+                    <Setter Property="Background" Value="{StaticResource AccentBlueBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="WeighingOut">
+                    <Setter Property="Background" Value="{StaticResource AccentOrangeBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Cancelled">
+                    <Setter Property="Background" Value="{StaticResource AccentRedBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Botones grandes de la botonera principal -->
+        <Style x:Key="BigAction" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="10,12" />
+        </Style>
+
+        <Style x:Key="NeutralAction" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="Padding" Value="10,8" />
+        </Style>
+
+        <!-- Fila de la lista de pesajes del día -->
+        <Style x:Key="DayItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Card" Background="{StaticResource SurfaceMidBrush}"
+                                BorderBrush="Transparent" BorderThickness="2" CornerRadius="5" Padding="10,7">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{StaticResource SidebarItemHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource AccentBlueBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -15,299 +96,397 @@
             <ColumnDefinition Width="340" />
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT: Weight displays + Form + Actions (centered) -->
+        <!-- IZQUIERDA: básculas + formulario + acciones + pesajes del día -->
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                       Margin="0,0,15,0">
             <Grid>
-
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-            <!-- Scale weight panels (1 or N) + connection controls -->
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <ItemsControl ItemsSource="{Binding ScaleDisplays}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel HorizontalAlignment="Center" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource DisplayPanel}" Padding="16"
-                                    MinWidth="320" Margin="0,0,8,8">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="13"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               HorizontalAlignment="Right" />
-
-                                    <TextBlock Grid.Row="1"
-                                               Text="{Binding WeightText, StringFormat='{}{0}kg'}"
-                                               FontFamily="Consolas"
-                                               FontSize="36"
-                                               FontWeight="Bold"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Right">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="{Binding IsStable, Converter={StaticResource BoolToGreenRedBrush}}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                        <Setter Property="Foreground" Value="#FF3333" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!-- Connection buttons beside scale panel -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,0,8">
-                    <Button Content="Conectar"
-                            Command="{Binding ConnectCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="10,5" Margin="0,0,0,4" />
-                    <Button Content="Desconectar"
-                            Command="{Binding DisconnectCommand}"
-                            Style="{StaticResource DangerButton}"
-                            Padding="10,5" />
-                    <TextBlock Text="{Binding ScaleDisplays[0].StatusText}"
-                               FontSize="11"
-                               Foreground="{Binding ScaleDisplays[0].IsConnected, Converter={StaticResource ConnectedBrushConverter}}"
-                               HorizontalAlignment="Center"
-                               Margin="0,4,0,0" />
-                </StackPanel>
-            </Grid>
-
-            <!-- Registration data: Patente + País + Conductor / Operador + Producto + Empresa -->
-            <Border Grid.Row="1" Style="{StaticResource CardPanel}" Padding="12" Margin="0,0,0,8">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                <!-- 1. BÁSCULAS: peso grande, estado y conexión de un vistazo -->
+                <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Row 0: Patente, País, Conductor -->
-                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
-                        <Label Content="Patente" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
-                        <TextBox Text="{Binding LicensePlate}" Width="180"
-                                 behaviors:TextBoxBehaviors.PlateCountry="{Binding PlateCountry}" />
-                    </StackPanel>
-                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,8">
-                        <Label Content="País" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
-                        <ComboBox ItemsSource="{Binding Countries}"
-                                  SelectedItem="{Binding PlateCountry}"
-                                  MaxDropDownHeight="200" Width="70" />
-                    </StackPanel>
-                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
-                        <Label Content="Conductor" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
-                        <ComboBox ItemsSource="{Binding DriversView}"
-                                  Text="{Binding DriverName, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEditable="True"
-                                  DisplayMemberPath="FullName"
-                                  IsTextSearchEnabled="False"
-                                  StaysOpenOnEdit="True"
-                                  IsDropDownOpen="{Binding IsDriverDropdownOpen}"
-                                  MaxDropDownHeight="200" />
-                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding ScaleDisplays}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource DisplayPanel}" Padding="16,12"
+                                        MinWidth="320" Margin="0,0,8,8">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                    <!-- Row 1: Operador, Producto, Empresa -->
-                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">
-                        <Label Content="Operador" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
-                        <ComboBox ItemsSource="{Binding OperatorsView}"
-                                  Text="{Binding OperatorName, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEditable="True"
-                                  DisplayMemberPath="FullName"
-                                  IsTextSearchEnabled="False"
-                                  StaysOpenOnEdit="True"
-                                  IsDropDownOpen="{Binding IsOperatorDropdownOpen}"
-                                  MaxDropDownHeight="200" />
-                    </StackPanel>
-                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,8,0">
-                        <Label Content="Producto" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
-                        <ComboBox ItemsSource="{Binding Products}"
-                                  SelectedItem="{Binding SelectedProduct}"
-                                  DisplayMemberPath="Name"
-                                  MaxDropDownHeight="200" />
-                    </StackPanel>
-                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,0">
-                        <Label Content="Empresa" Style="{StaticResource FormLabel}" Padding="0" Margin="0,0,0,2" />
-                        <ComboBox ItemsSource="{Binding Companies}"
-                                  SelectedItem="{Binding SelectedCompany}"
-                                  DisplayMemberPath="Name"
-                                  MaxDropDownHeight="200" />
+                                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center" />
+
+                                        <!-- Estado: ESTABLE / INESTABLE / SIN CONEXIÓN -->
+                                        <Border Grid.Column="1" CornerRadius="10" Padding="9,2"
+                                                Background="{Binding IsStable, Converter={StaticResource BoolToGreenRedBrush}}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock FontSize="10" FontWeight="Bold" Foreground="White">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="INESTABLE" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsStable}" Value="True">
+                                                                <Setter Property="Text" Value="ESTABLE" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                <Setter Property="Text" Value="SIN CONEXIÓN" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+
+                                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                                                   Text="{Binding WeightText, StringFormat='{}{0} kg'}"
+                                                   FontFamily="Consolas"
+                                                   FontSize="52"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Right"
+                                                   Margin="0,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{Binding IsStable, Converter={StaticResource BoolToGreenRedBrush}}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Conexión de las básculas -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top" Margin="4,0,0,8">
+                        <Button Content="Conectar"
+                                Command="{Binding ConnectCommand}"
+                                ToolTip="Conecta todas las básculas configuradas"
+                                Style="{StaticResource PrimaryButton}"
+                                Padding="12,7" Margin="0,0,0,4" />
+                        <Button Content="Desconectar"
+                                Command="{Binding DisconnectCommand}"
+                                Style="{StaticResource NeutralAction}"
+                                Padding="12,7" />
+                        <TextBlock Text="{Binding ScaleDisplays[0].StatusText}"
+                                   FontSize="11"
+                                   Foreground="{Binding ScaleDisplays[0].IsConnected, Converter={StaticResource ConnectedBrushConverter}}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,4,0,0" />
                     </StackPanel>
                 </Grid>
-            </Border>
 
-            <!-- Weights + Actions + Active weighings list -->
-            <Grid Grid.Row="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+                <!-- 2. DATOS DEL VEHÍCULO: la empresa primero, porque filtra operadores y conductores -->
+                <Border Grid.Row="1" Style="{StaticResource CardPanel}" Padding="14,12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="DATOS DEL PESAJE" Style="{StaticResource CardCaption}" />
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
 
-                <!-- Combined: weight display + action buttons -->
-                <Border Style="{StaticResource CardPanel}" Padding="10" Margin="0,0,0,6">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" MinWidth="120" />
-                            <ColumnDefinition Width="Auto" MinWidth="120" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                            <!-- Patente (obligatoria) + país -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Style="{StaticResource FieldLabel}">
+                                    <Run Text="Patente" /><Run Text=" *" Foreground="{StaticResource AccentRedBrush}" />
+                                </TextBlock>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding LicensePlate}"
+                                             FontFamily="Consolas" FontSize="18" FontWeight="Bold"
+                                             CharacterCasing="Upper"
+                                             ToolTip="Patente del vehículo (obligatoria)"
+                                             behaviors:TextBoxBehaviors.PlateCountry="{Binding PlateCountry}" />
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding Countries}"
+                                              SelectedItem="{Binding PlateCountry}"
+                                              ToolTip="País de la patente"
+                                              MaxDropDownHeight="200" Width="64" Margin="6,0,0,0"
+                                              VerticalContentAlignment="Center" />
+                                </Grid>
+                            </StackPanel>
 
-                        <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Label Content="Peso Entrada" Style="{StaticResource FormLabel}"
-                                   FontSize="12"
-                                   Padding="0" Margin="0,0,0,2" HorizontalAlignment="Center" />
-                            <Border Background="{StaticResource SurfaceDarkBrush}"
-                                    CornerRadius="6" Padding="10,4" MinWidth="100">
-                                <TextBlock Text="{Binding EntryWeightText}"
-                                           FontSize="15" FontWeight="Bold"
-                                           FontFamily="Consolas"
-                                           Foreground="{StaticResource TextPrimaryBrush}"
-                                           HorizontalAlignment="Center" />
-                            </Border>
-                        </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
+                                <TextBlock Text="Empresa" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{Binding Companies}"
+                                          SelectedItem="{Binding SelectedCompany}"
+                                          DisplayMemberPath="Name"
+                                          ToolTip="Al elegir una empresa, operadores y conductores se filtran por ella"
+                                          MaxDropDownHeight="200" />
+                            </StackPanel>
 
-                        <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0,0,0">
-                            <Label Content="Peso Salida" Style="{StaticResource FormLabel}"
-                                   FontSize="12"
-                                   Padding="0" Margin="0,0,0,2" HorizontalAlignment="Center" />
-                            <Border Background="{StaticResource SurfaceDarkBrush}"
-                                    CornerRadius="6" Padding="10,4" MinWidth="100">
-                                <TextBlock Text="{Binding ExitWeightText}"
-                                           FontSize="15" FontWeight="Bold"
-                                           FontFamily="Consolas"
-                                           Foreground="{StaticResource TextPrimaryBrush}"
-                                           HorizontalAlignment="Center" />
-                            </Border>
-                        </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                                <TextBlock Text="Producto" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{Binding Products}"
+                                          SelectedItem="{Binding SelectedProduct}"
+                                          DisplayMemberPath="Name"
+                                          MaxDropDownHeight="200" />
+                            </StackPanel>
 
-                        <StackPanel Grid.Column="2" Orientation="Horizontal"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
-                            <Button Content="Marcar entrada"
-                                    Command="{Binding StartWeighInCommand}"
-                                    Style="{StaticResource SuccessButton}"
-                                    FontSize="12"
-                                    VerticalAlignment="Center"
-                                    Padding="6,4" Margin="3" MinWidth="75" />
-                            <Button Content="Marcar salida"
-                                    Command="{Binding CompleteWeighOutCommand}"
-                                    Style="{StaticResource PrimaryButton}"
-                                    FontSize="12"
-                                    VerticalAlignment="Center"
-                                    Padding="6,4" Margin="3" MinWidth="75" />
-                            <Button Content="Cancelar pesaje"
-                                    Command="{Binding CancelWeighingCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    FontSize="12"
-                                    VerticalAlignment="Center"
-                                    Padding="6,4" Margin="3" MinWidth="75" />
-                            <Button Content="Nuevo pesaje"
-                                    Command="{Binding NewWeighingCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    FontSize="12"
-                                    VerticalAlignment="Center"
-                                    Padding="6,4" Margin="3" MinWidth="75" />
-                        </StackPanel>
-                    </Grid>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Operador" Style="{StaticResource FieldLabel}" />
+                                <Border Background="{StaticResource SurfaceDarkBrush}" CornerRadius="3"
+                                        BorderBrush="{StaticResource SurfaceLightBrush}" BorderThickness="1"
+                                        Padding="8,5" MinHeight="26"
+                                        ToolTip="Es el usuario con la sesión iniciada; se registra automáticamente">
+                                    <TextBlock Text="{Binding OperatorName}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2">
+                                <TextBlock Text="Conductor" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{Binding DriversView}"
+                                          Text="{Binding DriverName, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          DisplayMemberPath="FullName"
+                                          IsTextSearchEnabled="False"
+                                          StaysOpenOnEdit="True"
+                                          IsDropDownOpen="{Binding IsDriverDropdownOpen}"
+                                          ToolTip="Escriba para buscar"
+                                          MaxDropDownHeight="200" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="* Obligatorio para marcar la entrada. El operador es el usuario con sesión iniciada." FontSize="11"
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="1,8,0,0" />
+                    </StackPanel>
                 </Border>
 
-                <!-- Active weighings list -->
-                <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="10">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                <!-- 3. PESOS CAPTURADOS + ACCIONES + PESAJES DEL DÍA -->
+                <Grid Grid.Row="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
 
-                        <DockPanel>
-                            <TextBlock Text="Pesajes del Día" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" DockPanel.Dock="Top" />
-                            <ListBox ItemsSource="{Binding ActiveWeighings}"
-                                     SelectedItem="{Binding SelectedRecord}"
-                                     Background="Transparent"
-                                     BorderThickness="0">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{StaticResource SurfaceMidBrush}"
-                                                CornerRadius="4" Padding="8"
-                                                Margin="0,0,0,4">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding TicketNumber}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{StaticResource TextPrimaryBrush}"
-                                                           Margin="0,0,12,0" />
-                                                <TextBlock Grid.Column="1" Text="{Binding LicensePlate}"
-                                                           Foreground="{StaticResource TextSecondaryBrush}" />
-                                                <TextBlock Grid.Column="2"
-                                                           Text="{Binding GrossWeightText, StringFormat='E: {0} kg'}"
-                                                           Foreground="{StaticResource TextMutedBrush}"
-                                                           FontSize="11"
-                                                           Margin="8,0,8,0" />
-                                                <TextBlock Grid.Column="3"
-                                                           Text="{Binding TareWeightText, StringFormat='S: {0} kg'}"
-                                                           Foreground="{StaticResource TextMutedBrush}"
-                                                           FontSize="11"
-                                                           Margin="0,0,8,0" />
-                                                <TextBlock Grid.Column="4"
-                                                           Foreground="{StaticResource TextMutedBrush}">
-                                                    <Run Text="{Binding WeighInTime, StringFormat='{}{0:HH:mm}'}" />
-                                                    <Run Text="hs" />
-                                                </TextBlock>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                 </ListBox.ItemTemplate>
-                            </ListBox>
-                        </DockPanel>
+                    <Border Style="{StaticResource CardPanel}" Padding="14,12" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="PESOS CAPTURADOS" Style="{StaticResource CardCaption}" />
 
-                        <StackPanel Grid.Row="1">
-                            <Button Content="Imprimir Ticket"
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,6,0">
+                                    <TextBlock Text="Peso entrada" Style="{StaticResource FieldLabel}" />
+                                    <Border Background="{StaticResource SurfaceDarkBrush}" CornerRadius="6" Padding="12,8">
+                                        <TextBlock Text="{Binding EntryWeightText}"
+                                                   FontSize="26" FontWeight="Bold" FontFamily="Consolas"
+                                                   HorizontalAlignment="Right" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                    <TextBlock Text="Peso salida" Style="{StaticResource FieldLabel}" />
+                                    <Border Background="{StaticResource SurfaceDarkBrush}" CornerRadius="6" Padding="12,8">
+                                        <TextBlock Text="{Binding ExitWeightText}"
+                                                   FontSize="26" FontWeight="Bold" FontFamily="Consolas"
+                                                   HorizontalAlignment="Right" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Acciones principales: entrada y salida, grandes; las secundarias, más discretas -->
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Content="▶  Marcar entrada"
+                                        Command="{Binding StartWeighInCommand}"
+                                        Margin="0,0,6,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource BigAction}">
+                                            <Setter Property="Background" Value="{StaticResource AccentGreenBrush}" />
+                                            <Setter Property="ToolTip" Value="Registra el peso actual de la báscula de entrada" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsWeighingIn}" Value="True">
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                    <Setter Property="ToolTip" Value="Ya hay una entrada en curso: marque la salida, cancele o pulse Nuevo pesaje" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Button Grid.Column="1" Content="■  Marcar salida"
+                                        Command="{Binding CompleteWeighOutCommand}"
+                                        ToolTip="Cierra el pesaje con el peso actual de la báscula de salida"
+                                        Style="{StaticResource BigAction}"
+                                        Margin="6,0,0,0" />
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Content="Nuevo pesaje"
+                                        Command="{Binding NewWeighingCommand}"
+                                        ToolTip="Limpia el formulario para empezar otro pesaje"
+                                        Style="{StaticResource NeutralAction}"
+                                        Margin="0,0,6,0" />
+
+                                <Button Grid.Column="1" Content="Cancelar pesaje"
+                                        Command="{Binding CancelWeighingCommand}"
+                                        Margin="6,0,0,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource DangerButton}">
+                                            <Setter Property="Padding" Value="10,8" />
+                                            <Setter Property="ToolTip" Value="Anula la entrada en curso" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsWeighingIn}" Value="False">
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                    <Setter Property="ToolTip" Value="No hay una entrada en curso que cancelar" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+
+                            <!-- Resultado de la última acción, bien visible -->
+                            <Border CornerRadius="4" Background="{StaticResource SurfaceDarkBrush}" Padding="10,6" Margin="0,10,0,0">
+                                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Pesajes del día -->
+                    <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Pesajes del Día" Style="{StaticResource SectionTitle}" Margin="0" />
+                                    <Border Grid.Column="1" CornerRadius="10" Padding="10,2" VerticalAlignment="Center"
+                                            Background="{StaticResource SidebarItemSelectedBrush}">
+                                        <TextBlock Text="{Binding ActiveWeighings.Count}" FontWeight="Bold" FontSize="12" />
+                                    </Border>
+                                </Grid>
+
+                                <Grid>
+                                    <ListBox ItemsSource="{Binding ActiveWeighings}"
+                                             SelectedItem="{Binding SelectedRecord}"
+                                             ItemContainerStyle="{StaticResource DayItem}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             ToolTip="Haga clic en un pesaje para cargarlo en el formulario">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Text="{Binding LicensePlate, FallbackValue='—', TargetNullValue='—'}"
+                                                               FontFamily="Consolas" FontSize="16" FontWeight="Bold"
+                                                               Margin="0,0,12,0" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding TicketNumber}"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <Border Grid.Column="2" Style="{StaticResource StatusBadge}" Margin="8,0,10,0">
+                                                        <TextBlock Text="{Binding Status, Converter={StaticResource WeighingStatusConverter}}"
+                                                                   Foreground="White" FontSize="10" FontWeight="SemiBold" />
+                                                    </Border>
+                                                    <TextBlock Grid.Column="3" Foreground="{StaticResource TextMutedBrush}"
+                                                               VerticalAlignment="Center">
+                                                        <Run Text="{Binding WeighInTime, StringFormat='{}{0:HH:mm}'}" /><Run Text=" hs" />
+                                                    </TextBlock>
+
+                                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="4" FontSize="12"
+                                                               Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0">
+                                                        <Run Text="Entrada" /> <Run Text="{Binding GrossWeightText, Mode=OneWay}" FontFamily="Consolas" /><Run Text=" kg" />
+                                                        <Run Text="   ·   Salida" /> <Run Text="{Binding TareWeightText, Mode=OneWay}" FontFamily="Consolas" /><Run Text=" kg" />
+                                                    </TextBlock>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+
+                                    <TextBlock Text="Aún no hay pesajes hoy"
+                                               Foreground="{StaticResource TextMutedBrush}" FontSize="15"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Margin="0,24" IsHitTestVisible="False"
+                                               Visibility="{Binding ActiveWeighings.Count, Converter={StaticResource EmptyToVis}}" />
+                                </Grid>
+                            </DockPanel>
+
+                            <Button Grid.Row="1" Content="🖨  Imprimir ticket"
                                     Command="{Binding PrintPreviewCommand}"
+                                    ToolTip="Imprime el ticket del pesaje cargado o del último completado"
                                     Style="{StaticResource PrimaryButton}"
                                     HorizontalAlignment="Stretch"
-                                    Margin="0,6,0,0" />
-                            <TextBlock Text="{Binding StatusMessage}"
-                                       Style="{StaticResource StatusMessage}"
-                                       Margin="0,4,0,0" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
+                                    Margin="0,8,0,0" />
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
-        </Grid>
         </ScrollViewer>
 
-        <!-- RIGHT: Camera + Barrier + Traffic light sidebar -->
+        <!-- DERECHA: cámara, barrera y semáforo -->
         <views:WeighingSidebarView Grid.Column="2" />
 
         <GridSplitter Grid.Column="1" Width="0" />

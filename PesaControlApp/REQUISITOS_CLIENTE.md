@@ -38,7 +38,7 @@ Un cliente con una báscula usa solo el modo "servidor + puesto". Si más adelan
 - Todos los puestos y el servidor en la misma red local (LAN) cableada. Se desaconseja Wi-Fi para los puestos de pesaje.
 - El servidor accesible por IP fija desde cada puesto.
 - Puertos abiertos en el firewall del servidor: PostgreSQL (5432 por defecto) y compartición de archivos (SMB) para las fotos.
-- Internet solo si se usa reconocimiento de placas con PlateRecognizer (servicio en la nube), actualizaciones o soporte remoto.
+- Internet solo para actualizaciones o soporte remoto. La app no necesita internet para operar.
 
 ## 5. Dispositivos de campo
 

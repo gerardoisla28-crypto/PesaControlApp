@@ -58,7 +58,7 @@ public class CameraService : ICameraService, IDisposable
         return Task.CompletedTask;
     }
 
-    public async Task StartPreviewAsync()
+    public Task StartPreviewAsync()
     {
         if (_capture?.IsOpened() != true)
         {
@@ -71,21 +71,31 @@ public class CameraService : ICameraService, IDisposable
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
-        await Task.Run(async () =>
+        // El bucle de captura corre en segundo plano: esta llamada vuelve enseguida para que quien la
+        // usó pueda marcar la vista previa como activa (antes se quedaba esperando hasta detenerla).
+        _ = Task.Run(async () =>
         {
             using var mat = new Mat();
             while (!token.IsCancellationRequested)
             {
-                lock (_lock)
+                try
                 {
-                    if (_capture?.IsOpened() == true)
-                        _capture.Read(mat);
-                }
+                    lock (_lock)
+                    {
+                        if (_capture?.IsOpened() == true)
+                            _capture.Read(mat);
+                    }
 
-                if (!mat.Empty())
+                    if (!mat.Empty())
+                    {
+                        var jpegBytes = mat.ToBytes(".jpg");
+                        FrameCaptured?.Invoke(this, jpegBytes);
+                    }
+                }
+                catch (Exception ex)
                 {
-                    var jpegBytes = mat.ToBytes(".jpg");
-                    FrameCaptured?.Invoke(this, jpegBytes);
+                    // Un fallo en un cuadro no debe tumbar la vista previa
+                    ErrorOccurred?.Invoke(this, $"Error en la vista previa: {ex.Message}");
                 }
 
                 try
@@ -98,6 +108,8 @@ public class CameraService : ICameraService, IDisposable
                 }
             }
         }, token);
+
+        return Task.CompletedTask;
     }
 
     public Task StopPreviewAsync()

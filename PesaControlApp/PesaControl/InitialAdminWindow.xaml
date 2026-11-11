@@ -16,16 +16,9 @@
         </Style>
     </Window.Resources>
     <StackPanel Margin="28">
-        <TextBlock Text="Crear Admin" FontSize="20" FontWeight="Bold" Margin="0,0,0,8" />
+        <TextBlock Text="Crear usuario administrador" FontSize="20" FontWeight="Bold" Margin="0,0,0,8" />
         <TextBlock Text="Esta cuenta administrará los usuarios." TextWrapping="Wrap" Margin="0,0,0,16"
                    Foreground="{StaticResource TextSecondaryBrush}" />
-
-        <TextBlock Text="Usuario *" Margin="0,0,0,4" />
-        <TextBox x:Name="UsernameBox"
-                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                 materialDesign:HintAssist.Hint="Ej: AdminJuan"
-                 materialDesign:HintAssist.IsFloating="False" />
-        <TextBlock x:Name="UsernameError" Style="{StaticResource FieldError}" />
 
         <TextBlock Text="Nombre y apellido *" Margin="0,0,0,4" />
         <TextBox x:Name="FullNameBox"
@@ -33,6 +26,13 @@
                  materialDesign:HintAssist.Hint="Ej: Juan Pérez"
                  materialDesign:HintAssist.IsFloating="False" />
         <TextBlock x:Name="FullNameError" Style="{StaticResource FieldError}" />
+
+        <TextBlock Text="Usuario *" Margin="0,0,0,4" />
+        <TextBox x:Name="UsernameBox"
+                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                 materialDesign:HintAssist.Hint="Ej: AdminJuan"
+                 materialDesign:HintAssist.IsFloating="False" />
+        <TextBlock x:Name="UsernameError" Style="{StaticResource FieldError}" />
 
         <TextBlock x:Name="PasswordLabel" Margin="0,0,0,4" />
         <PasswordBox x:Name="PasswordBox"

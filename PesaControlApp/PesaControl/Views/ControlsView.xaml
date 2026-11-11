@@ -23,202 +23,453 @@
         <Style x:Key="TrafficLightGlow" TargetType="Ellipse" BasedOn="{StaticResource TrafficLightCircle}">
             <Setter Property="Opacity" Value="0.15" />
         </Style>
+
+        <!-- Panel de estado -->
+        <Style x:Key="StatusLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style x:Key="StatusValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        </Style>
+
+        <Style x:Key="BarrierStateText" TargetType="TextBlock" BasedOn="{StaticResource StatusValue}">
+            <Setter Property="Text" Value="SIN CONEXIÓN" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding BarrierVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding BarrierVM.IsOpen}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="ABIERTA" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding BarrierVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding BarrierVM.IsOpen}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="CERRADA" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding BarrierVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding BarrierVM.HasBarrier}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="NO INSTALADA" />
+                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="LightStateText" TargetType="TextBlock" BasedOn="{StaticResource StatusValue}">
+            <Setter Property="Text" Value="SIN CONEXIÓN" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding TrafficLightVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding TrafficLightVM.CurrentColor}" Value="Off" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="APAGADO" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding TrafficLightVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding TrafficLightVM.CurrentColor}" Value="Red" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="ROJO" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding TrafficLightVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding TrafficLightVM.CurrentColor}" Value="Yellow" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="AMARILLO" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentOrangeBrush}" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding TrafficLightVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding TrafficLightVM.CurrentColor}" Value="Green" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="VERDE" />
+                    <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding TrafficLightVM.IsConnected}" Value="True" />
+                        <Condition Binding="{Binding TrafficLightVM.HasTrafficLight}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Text" Value="NO INSTALADO" />
+                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- TOP: Selector + Conectar (unificado) -->
+        <!-- 1. Selector de equipo + conectar -->
         <Border Style="{StaticResource CardPanel}">
             <StackPanel>
                 <TextBlock Text="Control de Acceso" Style="{StaticResource SectionTitle}" />
-                <WrapPanel>
-                    <ComboBox ItemsSource="{Binding Devices}"
-                              SelectedItem="{Binding SelectedDevice}"
-                              DisplayMemberPath="Name"
-                              Width="240"
-                              Margin="0,0,4,0" />
-                    <Button Content="+ Agregar" Command="{Binding AddDeviceCommand}"
-                            Style="{StaticResource PrimaryButton}" Height="24" FontSize="13"
-                            Margin="0,0,4,0" Padding="6,0" />
-                    <Button Content="✎ Editar" Command="{Binding EditDeviceCommand}"
-                            Style="{StaticResource WarningButton}" Height="24" FontSize="13"
-                            Margin="0,0,4,0" Padding="6,0" />
-                    <Button Content="✕ Eliminar" Command="{Binding DeleteDeviceCommand}"
-                            Style="{StaticResource DangerButton}" Height="24" FontSize="13"
-                            Margin="0,0,6,0" Padding="6,0" />
-                    <Button Content="Conectar" Command="{Binding ConnectCommand}"
-                            Style="{StaticResource SuccessButton}"
-                            Margin="0,0,6,0" />
-                    <Button Content="Desconectar" Command="{Binding DisconnectCommand}"
-                            Style="{StaticResource DangerButton}" />
-                </WrapPanel>
-                <TextBlock Text="{Binding StatusMessage}"
-                           Style="{StaticResource StatusMessage}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox ItemsSource="{Binding Devices}"
+                                  SelectedItem="{Binding SelectedDevice}"
+                                  DisplayMemberPath="Name"
+                                  Width="260" Height="32"
+                                  VerticalContentAlignment="Center"
+                                  Margin="0,0,8,0" />
+                        <Button Content="+ Agregar" Command="{Binding AddDeviceCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Height="32" MinWidth="96" FontSize="13" Padding="12,0" Margin="0,0,6,0" />
+                        <Button Content="✎ Editar" Command="{Binding EditDeviceCommand}"
+                                Style="{StaticResource WarningButton}"
+                                Height="32" MinWidth="96" FontSize="13" Padding="12,0" Margin="0,0,6,0" />
+                        <Button Content="✕ Eliminar" Command="{Binding DeleteDeviceCommand}"
+                                Style="{StaticResource DangerButton}"
+                                Height="32" MinWidth="96" FontSize="13" Padding="12,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="Conectar" Command="{Binding ConnectCommand}"
+                                Style="{StaticResource SuccessButton}"
+                                Height="32" MinWidth="110" FontSize="13" Padding="12,0" Margin="0,0,6,0" />
+                        <Button Content="Desconectar" Command="{Binding DisconnectCommand}"
+                                Style="{StaticResource DangerButton}"
+                                Height="32" MinWidth="110" FontSize="13" Padding="12,0" />
+                    </StackPanel>
+                </Grid>
             </StackPanel>
         </Border>
 
-        <!-- CENTER: Barrier buttons + Traffic light visual (igual que antes) -->
-        <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="30">
+        <!-- 2. ESTADO ACTUAL (lo más importante, bien arriba) -->
+        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,10,0,0" Padding="24,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="1.4*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- LEFT: Barrier controls -->
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="Barrera" FontSize="18" FontWeight="Bold"
-                               HorizontalAlignment="Center" Margin="0,0,0,30" />
-
-                    <Button Content="ABRIR" Command="{Binding BarrierVM.OpenCommand}"
-                            IsEnabled="{Binding BarrierVM.IsConnected}"
-                            Style="{StaticResource SuccessButton}"
-                            FontSize="22" FontWeight="Bold"
-                            Padding="60,28" Margin="0,0,0,20"
-                            HorizontalAlignment="Center" />
-
-                    <Button Content="CERRAR" Command="{Binding BarrierVM.CloseCommand}"
-                            IsEnabled="{Binding BarrierVM.IsConnected}"
-                            Style="{StaticResource DangerButton}"
-                            FontSize="22" FontWeight="Bold"
-                            Padding="60,28"
-                            HorizontalAlignment="Center" />
-
-                    <Button Content="Actualizar" Command="{Binding BarrierVM.RefreshStatusCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            HorizontalAlignment="Center" Margin="0,20,0,0"
-                            IsEnabled="{Binding BarrierVM.IsConnected}" />
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="BARRERA" Style="{StaticResource StatusLabel}" />
+                    <TextBlock Style="{StaticResource BarrierStateText}" />
                 </StackPanel>
 
-                <!-- SEPARATOR -->
-                <GridSplitter Grid.Column="1" Width="3" Margin="40,0"
-                              Background="{StaticResource SurfaceLightBrush}"
-                              VerticalAlignment="Stretch"
-                              IsEnabled="False" />
+                <Border Grid.Column="1" Width="1" Background="{StaticResource SurfaceLightBrush}" Margin="20,2" />
 
-                <!-- RIGHT: Traffic light visual -->
-                <Border Grid.Column="2" CornerRadius="16" Padding="30"
-                        Background="{StaticResource SurfaceDarkBrush}"
-                        VerticalAlignment="Center" HorizontalAlignment="Center"
-                        Width="160">
-                    <StackPanel HorizontalAlignment="Center">
-                        <TextBlock Text="SEMÁFORO" FontSize="14" FontWeight="Bold"
-                                   HorizontalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"
-                                   Margin="0,0,0,25" />
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="SEMÁFORO" Style="{StaticResource StatusLabel}" />
+                    <TextBlock Style="{StaticResource LightStateText}" />
+                </StackPanel>
 
-                        <!-- RED LIGHT -->
-                        <StackPanel HorizontalAlignment="Center" Margin="0,0,0,16">
-                            <Ellipse Width="72" Height="72" StrokeThickness="3">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="#3DF44336" />
-                                        <Setter Property="Stroke" Value="#66F44336" />
-                                        <Setter Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="0" Opacity="0" ShadowDepth="0" />
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="False">
-                                                <Setter Property="Fill" Value="{StaticResource AccentRedBrush}" />
-                                                <Setter Property="Stroke" Value="{StaticResource AccentRedBrush}" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect BlurRadius="20" Opacity="0.8"
-                                                                          ShadowDepth="0" Color="#F44336" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
-                            </Ellipse>
-                            <TextBlock Text="CERRADO" FontSize="11" FontWeight="Bold"
-                                       HorizontalAlignment="Center" Margin="0,8,0,0">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="False">
-                                                <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                <Border Grid.Column="3" Width="1" Background="{StaticResource SurfaceLightBrush}" Margin="20,2" />
 
-                        <!-- GREEN LIGHT -->
-                        <StackPanel HorizontalAlignment="Center">
-                            <Ellipse Width="72" Height="72" StrokeThickness="3">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="#1D4CAF50" />
-                                        <Setter Property="Stroke" Value="#664CAF50" />
-                                        <Setter Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="0" Opacity="0" ShadowDepth="0" />
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="True">
-                                                <Setter Property="Fill" Value="{StaticResource AccentGreenBrush}" />
-                                                <Setter Property="Stroke" Value="{StaticResource AccentGreenBrush}" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect BlurRadius="20" Opacity="0.8"
-                                                                          ShadowDepth="0" Color="#4CAF50" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
-                            </Ellipse>
-                            <TextBlock Text="ABIERTO" FontSize="11" FontWeight="Bold"
-                                       HorizontalAlignment="Center" Margin="0,8,0,0">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="True">
-                                                <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-
-                        <!-- Estado actual -->
-                        <Border CornerRadius="4" Padding="12,5" Margin="0,20,0,0"
-                                Background="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToGreenRedBrush}}">
-                            <TextBlock Text="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToOpenClosed}}"
-                                       HorizontalAlignment="Center" FontWeight="Bold"
-                                       Foreground="White" />
-                        </Border>
-                    </StackPanel>
-                </Border>
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="ESTADO" Style="{StaticResource StatusLabel}" />
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="18" FontWeight="SemiBold"
+                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- BOTTOM: Connected status -->
-        <TextBlock Grid.Row="2" Margin="0,8,0,0" Style="{StaticResource StatusMessage}"
-                   VerticalAlignment="Center">
-            <Run Text="Barrera: " />
-            <Run Text="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToOpenClosed}}" />
-            <Run Text=" · " />
-            <Run Text="Semáforo: " />
-            <Run Text="{Binding TrafficLightVM.CurrentColor}" />
-            <Run Text=" · " />
-            <Run Text="{Binding StatusMessage}" FontWeight="Bold" />
-        </TextBlock>
+        <!-- 3. Barrera y semáforo, cada uno en su tarjeta -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Barrera -->
+            <Border Grid.Column="0" Style="{StaticResource DisplayPanel}" Padding="24,20" Margin="0,0,8,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="BARRERA" FontSize="16" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,12" />
+
+                    <!-- Dibujo de la barrera: se levanta al abrir y baja al cerrar -->
+                                        <Viewbox Grid.Row="1" MaxWidth="320" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,12">
+                                            <Canvas Width="210" Height="96">
+                                                <!-- Suelo -->
+                                                <Rectangle Canvas.Left="0" Canvas.Top="86" Width="210" Height="5" RadiusX="2" RadiusY="2" Fill="#9CA3AF" />
+                                                <!-- Apoyo donde descansa el brazo -->
+                                                <Rectangle Canvas.Left="186" Canvas.Top="56" Width="10" Height="30" RadiusX="2" RadiusY="2" Fill="#6B7280" />
+                                                <!-- Poste base -->
+                                                <Border Canvas.Left="8" Canvas.Top="38" Width="32" Height="48" CornerRadius="5" BorderBrush="#374151" BorderThickness="2">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                            <GradientStop Color="#4B5563" Offset="0" />
+                                                            <GradientStop Color="#9CA3AF" Offset="0.5" />
+                                                            <GradientStop Color="#4B5563" Offset="1" />
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
+                                                <!-- Brazo (rayas rojas y blancas) -->
+                                                <Border Canvas.Left="24" Canvas.Top="45" Width="170" Height="14" CornerRadius="3"
+                                                        BorderBrush="#7F1D1D" BorderThickness="1" RenderTransformOrigin="0,0.5">
+                                                    <Border.Background>
+                                                        <DrawingBrush TileMode="Tile" Viewport="0,0,28,14" ViewportUnits="Absolute"
+                                                                      Viewbox="0,0,28,14" ViewboxUnits="Absolute">
+                                                            <DrawingBrush.Drawing>
+                                                                <DrawingGroup>
+                                                                    <GeometryDrawing Brush="White">
+                                                                        <GeometryDrawing.Geometry>
+                                                                            <RectangleGeometry Rect="0,0,28,14" />
+                                                                        </GeometryDrawing.Geometry>
+                                                                    </GeometryDrawing>
+                                                                    <GeometryDrawing Brush="#E53935">
+                                                                        <GeometryDrawing.Geometry>
+                                                                            <RectangleGeometry Rect="14,0,14,14" />
+                                                                        </GeometryDrawing.Geometry>
+                                                                    </GeometryDrawing>
+                                                                </DrawingGroup>
+                                                            </DrawingBrush.Drawing>
+                                                        </DrawingBrush>
+                                                    </Border.Background>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="RenderTransform">
+                                                                <Setter.Value>
+                                                                    <RotateTransform Angle="0" />
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="True">
+                                                                    <DataTrigger.EnterActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                                 To="-68" Duration="0:0:0.6">
+                                                                                    <DoubleAnimation.EasingFunction>
+                                                                                        <CubicEase EasingMode="EaseInOut" />
+                                                                                    </DoubleAnimation.EasingFunction>
+                                                                                </DoubleAnimation>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </DataTrigger.EnterActions>
+                                                                    <DataTrigger.ExitActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                                 To="0" Duration="0:0:0.6">
+                                                                                    <DoubleAnimation.EasingFunction>
+                                                                                        <CubicEase EasingMode="EaseInOut" />
+                                                                                    </DoubleAnimation.EasingFunction>
+                                                                                </DoubleAnimation>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </DataTrigger.ExitActions>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                </Border>
+                                                <!-- Eje -->
+                                                <Ellipse Canvas.Left="16" Canvas.Top="44" Width="16" Height="16" Fill="#374151" Stroke="#111827" StrokeThickness="2" />
+                                            </Canvas>
+                                        </Viewbox>
+
+                    <StackPanel Grid.Row="2" HorizontalAlignment="Center" Width="280">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="ABRIR" Command="{Binding BarrierVM.OpenCommand}"
+                                    IsEnabled="{Binding BarrierVM.IsConnected}"
+                                    Style="{StaticResource SuccessButton}"
+                                    Height="52" FontSize="18" FontWeight="Bold" Margin="0,0,4,0" />
+                            <Button Grid.Column="1" Content="CERRAR" Command="{Binding BarrierVM.CloseCommand}"
+                                    IsEnabled="{Binding BarrierVM.IsConnected}"
+                                    Style="{StaticResource DangerButton}"
+                                    Height="52" FontSize="18" FontWeight="Bold" Margin="4,0,0,0" />
+                        </Grid>
+                        <Button Content="Actualizar" Command="{Binding BarrierVM.RefreshStatusCommand}"
+                                IsEnabled="{Binding BarrierVM.IsConnected}"
+                                Style="{StaticResource PrimaryButton}"
+                                Height="34" FontSize="13" Margin="0,8,0,0" />
+                    </StackPanel>
+
+                    <!-- Pie fijo: casilla para mostrar/ocultar en Pesaje -->
+                    <Border Grid.Row="3" BorderBrush="{StaticResource SurfaceLightBrush}" BorderThickness="0,1,0,0"
+                            Margin="0,16,0,0" Padding="0,12,0,0">
+                        <CheckBox Content="Mostrar la barrera en Pesaje"
+                                  IsChecked="{Binding ShowBarrierInWeighing}"
+                                  HorizontalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Semáforo -->
+            <Border Grid.Column="1" Style="{StaticResource DisplayPanel}" Padding="24,20" Margin="8,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="SEMÁFORO" FontSize="16" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,12" />
+
+                    <!-- El semáforo se ajusta al alto disponible para no cortarse -->
+                    <Viewbox Grid.Row="1" Stretch="Uniform" MaxHeight="340" Margin="0,0,0,12">
+                        <StackPanel Margin="24,12">
+                            <!-- Carcasa del semáforo (solo las luces sobre fondo oscuro) -->
+                                                    <Border CornerRadius="16" Padding="12,16" BorderThickness="3"
+                                                            BorderBrush="#374151" HorizontalAlignment="Center">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                <GradientStop Color="#0B0F17" Offset="0" />
+                                                                <GradientStop Color="#1F2937" Offset="0.5" />
+                                                                <GradientStop Color="#0B0F17" Offset="1" />
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                        <Border.Effect>
+                                                            <DropShadowEffect BlurRadius="12" Opacity="0.35" ShadowDepth="3" />
+                                                        </Border.Effect>
+                                                        <StackPanel>
+                                                            <Grid Width="86" Height="86" Margin="0,0,0,10">
+                                                                <Ellipse Fill="#05070B" Stroke="#374151" StrokeThickness="2" />
+                                                                <Ellipse Width="72" Height="72">
+                                                                    <Ellipse.Style>
+                                                                        <Style TargetType="Ellipse">
+                                                                            <Setter Property="Fill">
+                                                                                <Setter.Value>
+                                                                                    <RadialGradientBrush GradientOrigin="0.4,0.35">
+                                                                                        <GradientStop Color="#6B1F1B" Offset="0" />
+                                                                                        <GradientStop Color="#2A0B0A" Offset="1" />
+                                                                                    </RadialGradientBrush>
+                                                                                </Setter.Value>
+                                                                            </Setter>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="False">
+                                                                                    <Setter Property="Fill">
+                                                                                        <Setter.Value>
+                                                                                            <RadialGradientBrush GradientOrigin="0.4,0.35">
+                                                                                                <GradientStop Color="#FFAB91" Offset="0" />
+                                                                                                <GradientStop Color="#F44336" Offset="0.55" />
+                                                                                                <GradientStop Color="#B71C1C" Offset="1" />
+                                                                                            </RadialGradientBrush>
+                                                                                        </Setter.Value>
+                                                                                    </Setter>
+                                                                                    <Setter Property="Effect">
+                                                                                        <Setter.Value>
+                                                                                            <DropShadowEffect BlurRadius="32" Opacity="0.85"
+                                                                                                              ShadowDepth="0" Color="#F44336" />
+                                                                                        </Setter.Value>
+                                                                                    </Setter>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Ellipse.Style>
+                                                                </Ellipse>
+                                                                <Ellipse Width="36" Height="19" Fill="White" Opacity="0.22"
+                                                                         VerticalAlignment="Top" Margin="0,19,0,0" IsHitTestVisible="False" />
+                                                                <Border Height="6" Width="86" VerticalAlignment="Top" Background="#0B0F17"
+                                                                        CornerRadius="43,43,0,0" IsHitTestVisible="False" />
+                                                            </Grid>
+                                                            <Grid Width="86" Height="86">
+                                                                <Ellipse Fill="#05070B" Stroke="#374151" StrokeThickness="2" />
+                                                                <Ellipse Width="72" Height="72">
+                                                                    <Ellipse.Style>
+                                                                        <Style TargetType="Ellipse">
+                                                                            <Setter Property="Fill">
+                                                                                <Setter.Value>
+                                                                                    <RadialGradientBrush GradientOrigin="0.4,0.35">
+                                                                                        <GradientStop Color="#1E5A22" Offset="0" />
+                                                                                        <GradientStop Color="#0A1F0B" Offset="1" />
+                                                                                    </RadialGradientBrush>
+                                                                                </Setter.Value>
+                                                                            </Setter>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding BarrierVM.IsOpen}" Value="True">
+                                                                                    <Setter Property="Fill">
+                                                                                        <Setter.Value>
+                                                                                            <RadialGradientBrush GradientOrigin="0.4,0.35">
+                                                                                                <GradientStop Color="#C8E6C9" Offset="0" />
+                                                                                                <GradientStop Color="#4CAF50" Offset="0.55" />
+                                                                                                <GradientStop Color="#1B5E20" Offset="1" />
+                                                                                            </RadialGradientBrush>
+                                                                                        </Setter.Value>
+                                                                                    </Setter>
+                                                                                    <Setter Property="Effect">
+                                                                                        <Setter.Value>
+                                                                                            <DropShadowEffect BlurRadius="32" Opacity="0.85"
+                                                                                                              ShadowDepth="0" Color="#4CAF50" />
+                                                                                        </Setter.Value>
+                                                                                    </Setter>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Ellipse.Style>
+                                                                </Ellipse>
+                                                                <Ellipse Width="36" Height="19" Fill="White" Opacity="0.22"
+                                                                         VerticalAlignment="Top" Margin="0,19,0,0" IsHitTestVisible="False" />
+                                                                <Border Height="10" Width="86" VerticalAlignment="Top" Background="#0B0F17"
+                                                                        CornerRadius="43,43,0,0" IsHitTestVisible="False" />
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Border>
+                            
+                                                    <!-- Poste -->
+                                                    <Rectangle Width="12" Height="16" HorizontalAlignment="Center">
+                                                        <Rectangle.Fill>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                <GradientStop Color="#4B5563" Offset="0" />
+                                                                <GradientStop Color="#9CA3AF" Offset="0.5" />
+                                                                <GradientStop Color="#4B5563" Offset="1" />
+                                                            </LinearGradientBrush>
+                                                        </Rectangle.Fill>
+                                                    </Rectangle>
+                        </StackPanel>
+                    </Viewbox>
+
+                    <Border Grid.Row="2" CornerRadius="4" Padding="14,5" HorizontalAlignment="Center"
+                            Background="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToGreenRedBrush}}">
+                        <TextBlock Text="{Binding BarrierVM.IsOpen, Converter={StaticResource BoolToOpenClosed}}"
+                                   HorizontalAlignment="Center" FontWeight="Bold"
+                                   Foreground="White" FontSize="14" />
+                    </Border>
+
+                    <!-- Pie fijo: casilla para mostrar/ocultar en Pesaje -->
+                    <Border Grid.Row="3" BorderBrush="{StaticResource SurfaceLightBrush}" BorderThickness="0,1,0,0"
+                            Margin="0,16,0,0" Padding="0,12,0,0">
+                        <CheckBox Content="Mostrar el semáforo en Pesaje"
+                                  IsChecked="{Binding ShowTrafficLightInWeighing}"
+                                  HorizontalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- ── Device editor overlay (unificado) ── -->
         <Grid Visibility="{Binding IsDeviceEditorOpen, Converter={StaticResource BoolToVisibilityConverter}}"

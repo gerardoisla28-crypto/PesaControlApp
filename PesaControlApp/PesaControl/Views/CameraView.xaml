@@ -11,6 +11,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- MODE TOGGLE + CONTROL BAR -->
@@ -115,7 +116,7 @@
                                       Style="{StaticResource SmallToggleButton}" />
                     </WrapPanel>
 
-                    <!-- Channel toggles + ANPR -->
+                    <!-- Channel toggles -->
                     <WrapPanel Margin="0,6,0,0">
                         <TextBlock Text="Canales:" FontWeight="Bold"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -128,15 +129,6 @@
                         <ToggleButton Content="CH4" IsChecked="{Binding DvrChannel4Active}"
                                       Style="{StaticResource SmallToggleButton}" Margin="0,0,12,0" />
 
-                        <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="4,0" />
-
-                        <TextBlock Text="ANPR:" FontWeight="Bold"
-                                   VerticalAlignment="Center" Margin="8,0,4,0" />
-                        <ComboBox SelectedItem="{Binding SelectedPtzChannel}"
-                                  ItemsSource="{Binding ChannelNumbers}"
-                                  Width="60" Margin="0,0,4,0" />
-                        <Button Content="Capturar" Command="{Binding CaptureSelectedAnprCommand}"
-                                Style="{StaticResource SmallButton}" />
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -223,11 +215,6 @@
                                         <Run Text="CH1 - " /><Run Text="{Binding DvrStatus1}" />
                                     </TextBlock>
                                 </Border>
-                                <Border Background="#80000000" CornerRadius="4" Padding="8,4"
-                                        VerticalAlignment="Top" HorizontalAlignment="Right" Margin="4">
-                                    <TextBlock Text="{Binding DvrChannel1Plate}" FontSize="10"
-                                               Foreground="{StaticResource AccentGreenBrush}" />
-                                </Border>
                             </Grid>
                         </Border>
 
@@ -242,11 +229,6 @@
                                     <TextBlock FontSize="11" FontWeight="Bold">
                                         <Run Text="CH2 - " /><Run Text="{Binding DvrStatus2}" />
                                     </TextBlock>
-                                </Border>
-                                <Border Background="#80000000" CornerRadius="4" Padding="8,4"
-                                        VerticalAlignment="Top" HorizontalAlignment="Right" Margin="4">
-                                    <TextBlock Text="{Binding DvrChannel2Plate}" FontSize="10"
-                                               Foreground="{StaticResource AccentGreenBrush}" />
                                 </Border>
                             </Grid>
                         </Border>
@@ -263,11 +245,6 @@
                                         <Run Text="CH3 - " /><Run Text="{Binding DvrStatus3}" />
                                     </TextBlock>
                                 </Border>
-                                <Border Background="#80000000" CornerRadius="4" Padding="8,4"
-                                        VerticalAlignment="Top" HorizontalAlignment="Right" Margin="4">
-                                    <TextBlock Text="{Binding DvrChannel3Plate}" FontSize="10"
-                                               Foreground="{StaticResource AccentGreenBrush}" />
-                                </Border>
                             </Grid>
                         </Border>
 
@@ -283,11 +260,6 @@
                                     <TextBlock FontSize="11" FontWeight="Bold">
                                         <Run Text="CH4 - " /><Run Text="{Binding DvrStatus4}" />
                                     </TextBlock>
-                                </Border>
-                                <Border Background="#80000000" CornerRadius="4" Padding="8,4"
-                                        VerticalAlignment="Top" HorizontalAlignment="Right" Margin="4">
-                                    <TextBlock Text="{Binding DvrChannel4Plate}" FontSize="10"
-                                               Foreground="{StaticResource AccentGreenBrush}" />
                                 </Border>
                             </Grid>
                         </Border>
@@ -382,35 +354,11 @@
             </Grid>
         </Grid>
 
-        <!-- DETECTED PLATE (shared) -->
-        <Border Grid.Row="2" Style="{StaticResource CardPanel}" Margin="0,8,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Text="Patente detectada:"
-                           FontWeight="Bold"
-                           VerticalAlignment="Center"
-                           Margin="0,0,12,0"
-                           Foreground="{StaticResource TextSecondaryBrush}" />
-
-                <TextBlock Grid.Column="1"
-                           Text="{Binding DetectedPlate}"
-                           FontSize="32"
-                           FontWeight="Bold"
-                           FontFamily="Consolas"
-                           Foreground="{StaticResource AccentGreenBrush}"
-                           VerticalAlignment="Center" />
-
-                <TextBlock Grid.Column="2"
-                           Text="{Binding AnprConfidence, StringFormat={}{0:P0}}"
-                           FontSize="16"
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           VerticalAlignment="Center" />
-            </Grid>
+        <!-- Pie fijo: casilla para mostrar/ocultar la cámara en Pesaje -->
+        <Border Grid.Row="3" Style="{StaticResource CardPanel}" Margin="0,8,0,0" Padding="12,10">
+            <CheckBox Content="Mostrar la cámara en Pesaje"
+                      IsChecked="{Binding ShowCameraInWeighing}"
+                      HorizontalAlignment="Center" />
         </Border>
     </Grid>
 </UserControl>

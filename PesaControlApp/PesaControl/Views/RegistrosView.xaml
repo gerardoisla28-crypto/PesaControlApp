@@ -7,125 +7,278 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="1000"
              Foreground="{StaticResource TextPrimaryBrush}">
+
+    <UserControl.Resources>
+        <!-- Etiqueta sobre cada filtro -->
+        <Style x:Key="FilterLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="1,0,0,3" />
+        </Style>
+
+        <Style x:Key="FilterField" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,10,8" />
+        </Style>
+
+        <!-- Celdas: texto a la izquierda, cifras a la derecha, "—" cuando no hay dato -->
+        <Style x:Key="CellText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="8,7" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style x:Key="CellNumber" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <!-- Encabezado de columna -->
+        <Style TargetType="GridViewColumnHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridViewColumnHeader">
+                        <Border Background="{StaticResource SurfaceMidBrush}"
+                                BorderBrush="{StaticResource SurfaceLightBrush}"
+                                BorderThickness="0,0,0,1" Padding="8,8">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Insignia de estado -->
+        <Style x:Key="StatusBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="9,2" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                    <Setter Property="Background" Value="{StaticResource AccentGreenBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="WeighingIn">
+                    <Setter Property="Background" Value="{StaticResource AccentBlueBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="WeighingOut">
+                    <Setter Property="Background" Value="{StaticResource AccentOrangeBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Cancelled">
+                    <Setter Property="Background" Value="{StaticResource AccentRedBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+
+        <Style x:Key="PageButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="MinWidth" Value="32" />
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- FILTERS -->
+        <!-- FILTROS: Enter en cualquier campo de texto busca -->
         <Border Style="{StaticResource CardPanel}">
             <StackPanel>
-                <TextBlock Text="Historial de Pesajes" Style="{StaticResource SectionTitle}" />
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Historial de Pesajes" Style="{StaticResource SectionTitle}" Margin="0" />
+                    <TextBlock Grid.Column="1" Text="{Binding StatusMessage}"
+                               Style="{StaticResource StatusMessage}" Margin="0" VerticalAlignment="Center" />
+                </Grid>
 
-                <WrapPanel Margin="0,0,0,10">
-                    <StackPanel Margin="0,0,6,0">
+                <WrapPanel>
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Patente" Style="{StaticResource FilterLabel}" />
                         <TextBox Text="{Binding SearchPlate, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="140" ToolTip="Buscar por patente" />
-                        <TextBlock Text="Patente" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                                 Width="130" ToolTip="Buscar por patente (Enter para buscar)">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding SearchCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0">
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Ticket" Style="{StaticResource FilterLabel}" />
                         <TextBox Text="{Binding SearchTicket, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="100" ToolTip="Buscar por ticket" />
-                        <TextBlock Text="Ticket" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                                 Width="130" ToolTip="Buscar por ticket (Enter para buscar)">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding SearchCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0">
-                        <DatePicker SelectedDate="{Binding FilterFrom}"
-                                    Width="120" ToolTip="Desde" />
-                        <TextBlock Text="Desde" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Desde" Style="{StaticResource FilterLabel}" />
+                        <DatePicker SelectedDate="{Binding FilterFrom}" Width="125" ToolTip="Desde esta fecha" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0">
-                        <DatePicker SelectedDate="{Binding FilterTo}"
-                                    Width="120" ToolTip="Hasta" />
-                        <TextBlock Text="Hasta" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Hasta" Style="{StaticResource FilterLabel}" />
+                        <DatePicker SelectedDate="{Binding FilterTo}" Width="125" ToolTip="Hasta esta fecha" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0">
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Estado" Style="{StaticResource FilterLabel}" />
                         <ComboBox ItemsSource="{Binding Statuses}"
                                   SelectedItem="{Binding FilterStatus}"
-                                  Width="130" ToolTip="Filtrar por estado">
+                                  Width="140" ToolTip="Filtrar por estado">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Converter={StaticResource WeighingStatusConverter}}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Text="Estado" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0">
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Producto" Style="{StaticResource FilterLabel}" />
                         <ComboBox ItemsSource="{Binding Products}"
                                   SelectedItem="{Binding FilterProduct}"
                                   DisplayMemberPath="Name"
-                                  Width="140" ToolTip="Filtrar por producto" />
-                        <TextBlock Text="Producto" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                                  Width="150" ToolTip="Filtrar por producto" />
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,6,0">
+                    <StackPanel Style="{StaticResource FilterField}">
+                        <TextBlock Text="Empresa" Style="{StaticResource FilterLabel}" />
                         <ComboBox ItemsSource="{Binding Companies}"
                                   SelectedItem="{Binding FilterCompany}"
                                   DisplayMemberPath="Name"
-                                  Width="140" ToolTip="Filtrar por empresa" />
-                        <TextBlock Text="Empresa" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                                  Width="150" ToolTip="Filtrar por empresa" />
                     </StackPanel>
-
                 </WrapPanel>
 
-                <WrapPanel>
-                    <Button Content="Buscar" Command="{Binding SearchCommand}"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,4,0" />
-                    <Button Content="Limpiar" Command="{Binding ClearFiltersCommand}"
-                            Style="{StaticResource WarningButton}" Margin="0,0,4,0" />
-                    <Button Content="Imprimir" Command="{Binding PrintTicketCommand}"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,4,0" />
-                    <TextBlock Text="{Binding StatusMessage}"
-                               Style="{StaticResource StatusMessage}" VerticalAlignment="Center" />
-                </WrapPanel>
-
-                <!-- Intercambio entre puestos (pendrive): solo para quien puede exportar e importar -->
-                <StackPanel Margin="0,10,0,0" Visibility="{Binding CanExchange, Converter={StaticResource BoolToVis}}">
-                    <Separator Background="{StaticResource SurfaceLightBrush}" Margin="0,0,0,10" />
-                    <WrapPanel>
-                        <Button Content="Seleccionar todos" Command="{Binding SelectAllFilteredCommand}"
-                                ToolTip="Marca todos los pesajes del filtro actual, en todas las páginas"
-                                Style="{StaticResource PrimaryButton}" Margin="0,0,4,0" />
-                        <Button Content="Quitar selección" Command="{Binding ClearSelectionCommand}"
-                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" />
-                        <TextBlock Text="{Binding SelectionText}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,0" />
-                        <Button Content="Exportar seleccionados" Command="{Binding ExportSelectedCommand}"
-                                ToolTip="Crea un archivo con los pesajes marcados para llevarlo a otro equipo"
-                                Style="{StaticResource SuccessButton}" Margin="0,0,4,0" />
-                        <Button Content="Importar archivo" Command="{Binding ImportFileCommand}"
-                                ToolTip="Une los pesajes de un archivo de otro puesto con los de este equipo"
-                                Style="{StaticResource PrimaryButton}" />
-                    </WrapPanel>
-                    <ProgressBar Value="{Binding ProgressValue}" Height="8" BorderThickness="0" Margin="0,8,0,0"
-                                 Foreground="{StaticResource AccentGreenBrush}" Background="{StaticResource SurfaceLightBrush}"
-                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
-                </StackPanel>
+                <!-- Acciones: buscar/limpiar a la izquierda, imprimir (sobre la fila elegida) a la derecha -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Buscar" Command="{Binding SearchCommand}"
+                                Style="{StaticResource ToolbarButton}" />
+                        <Button Content="Limpiar filtros" Command="{Binding ClearFiltersCommand}"
+                                Style="{StaticResource ToolbarButton}"
+                                Background="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="🖨  Imprimir ticket"
+                            Command="{Binding PrintTicketCommand}"
+                            Margin="0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+                                <Setter Property="ToolTip" Value="Imprime el ticket de la fila seleccionada" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedRecord}" Value="{x:Null}">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                        <Setter Property="ToolTip" Value="Seleccione una fila de la lista para imprimir su ticket" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
             </StackPanel>
         </Border>
 
-        <!-- RECORDS LIST -->
-        <Border Grid.Row="1" Style="{StaticResource DisplayPanel}" Padding="4">
+        <!-- INTERCAMBIO ENTRE PUESTOS (pendrive): solo para quien puede exportar e importar -->
+        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Padding="15,10"
+                Visibility="{Binding CanExchange, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Intercambio entre puestos" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <Border CornerRadius="10" Padding="10,2" VerticalAlignment="Center"
+                                Background="{StaticResource SidebarItemSelectedBrush}">
+                            <TextBlock Text="{Binding SelectionText}" FontWeight="SemiBold" FontSize="12" />
+                        </Border>
+                        <Button Content="Seleccionar todos" Command="{Binding SelectAllFilteredCommand}"
+                                ToolTip="Marca todos los pesajes del filtro actual, en todas las páginas"
+                                Style="{StaticResource ToolbarButton}" Margin="14,0,6,0" Padding="10,5" />
+                        <Button Content="Quitar selección" Command="{Binding ClearSelectionCommand}"
+                                Style="{StaticResource ToolbarButton}" Padding="10,5"
+                                Background="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Content="Exportar seleccionados" Command="{Binding ExportSelectedCommand}"
+                                Padding="12,6" Margin="0,0,6,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SuccessButton}">
+                                    <Setter Property="ToolTip" Value="Crea un archivo con los pesajes marcados para llevarlo a otro equipo" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedInFilterCount}" Value="0">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                            <Setter Property="ToolTip" Value="Marque pesajes con las casillas de la lista para exportarlos" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="Importar archivo" Command="{Binding ImportFileCommand}"
+                                ToolTip="Une los pesajes de un archivo de otro puesto con los de este equipo"
+                                Padding="12,6">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <ProgressBar Value="{Binding ProgressValue}" Height="6" BorderThickness="0" Margin="0,8,0,0"
+                             Foreground="{StaticResource AccentGreenBrush}" Background="{StaticResource SurfaceLightBrush}"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+        </Border>
+
+        <!-- LISTA DE REGISTROS -->
+        <Border Grid.Row="2" Style="{StaticResource DisplayPanel}" Padding="0">
             <Grid>
                 <ListView ItemsSource="{Binding Records}"
                           SelectedItem="{Binding SelectedRecord}"
                           Background="Transparent"
                           BorderThickness="0"
                           Foreground="{StaticResource TextPrimaryBrush}"
-                          MouseDoubleClick="ListView_MouseDoubleClick">
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          MouseDoubleClick="ListView_MouseDoubleClick"
+                          ToolTip="Doble clic para ver el detalle del pesaje">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -134,7 +287,10 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListViewItem">
-                                        <Border Background="{TemplateBinding Background}"
+                                        <Border x:Name="Row"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{StaticResource SurfaceMidBrush}"
+                                                BorderThickness="0,0,0,1"
                                                 SnapsToDevicePixels="True">
                                             <GridViewRowPresenter Content="{TemplateBinding Content}"
                                                                   Columns="{TemplateBinding GridView.ColumnCollection}"
@@ -142,6 +298,11 @@
                                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
                                         </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource AccentBlueBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Setter.Value>
                             </Setter>
@@ -150,16 +311,12 @@
                                     <Setter Property="Background" Value="{StaticResource SidebarItemHoverBrush}" />
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SidebarItemHoverBrush}" />
+                                    <Setter Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
                     </ListView.ItemContainerStyle>
-                    <ListView.Resources>
-                        <Style TargetType="GridViewColumnHeader">
-                            <Setter Property="Padding" Value="8,4,8,4" />
-                        </Style>
-                    </ListView.Resources>
+
                     <ListView.View>
                         <GridView AllowsColumnReorder="False">
                             <GridViewColumn x:Name="CheckColumn" Width="40">
@@ -171,141 +328,140 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Ticket" Width="150">
+                            <GridViewColumn Header="Ticket" Width="140">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding TicketNumber}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding TicketNumber, FallbackValue='—', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" FontWeight="SemiBold" />
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Fecha Entrada" Width="130">
+                            <GridViewColumn Header="Patente" Width="95">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding WeighInTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Fecha Salida" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding WeighOutTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Patente" Width="100">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding LicensePlate}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   FontWeight="Bold" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Producto" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Product.Name}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Empresa" Width="140">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Company.Name}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Operador" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding OperatorName}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Conductor" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding DriverName}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Peso Entrada" Width="100">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding GrossWeightText}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Peso Salida" Width="100">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding TareWeightText}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Peso Neto" Width="100">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding NetWeightText}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   FontWeight="Bold" />
+                                        <TextBlock Text="{Binding LicensePlate, FallbackValue='—', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}"
+                                                   FontFamily="Consolas" FontSize="14" FontWeight="Bold" />
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <GridViewColumn Header="Estado" Width="125">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Status, Converter={StaticResource WeighingStatusConverter}}"
-                                                   HorizontalAlignment="Stretch"
-                                                   TextAlignment="Center"
-                                                   VerticalAlignment="Center" />
+                                        <Border Style="{StaticResource StatusBadge}" Margin="8,0">
+                                            <TextBlock Text="{Binding Status, Converter={StaticResource WeighingStatusConverter}}"
+                                                       Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                                        </Border>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="Cámara" Width="60">
+                            <GridViewColumn Header="Entrada" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding WeighInTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Salida" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding WeighOutTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Producto" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Product.Name, FallbackValue='—', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Empresa" Width="140">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Company.Name, FallbackValue='—', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Conductor" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DriverName, FallbackValue='—', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Operador" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding OperatorName, FallbackValue='—', TargetNullValue='—'}"
+                                                   Style="{StaticResource CellText}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Width="100">
+                                <GridViewColumn.Header>
+                                    <TextBlock Text="Peso entrada" TextAlignment="Right" />
+                                </GridViewColumn.Header>
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding GrossWeightText}" Style="{StaticResource CellNumber}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Width="100">
+                                <GridViewColumn.Header>
+                                    <TextBlock Text="Peso salida" TextAlignment="Right" />
+                                </GridViewColumn.Header>
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding TareWeightText}" Style="{StaticResource CellNumber}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Width="105">
+                                <GridViewColumn.Header>
+                                    <TextBlock Text="Peso neto" TextAlignment="Right" />
+                                </GridViewColumn.Header>
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding NetWeightText}" Style="{StaticResource CellNumber}"
+                                                   FontWeight="Bold" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Fotos" Width="55">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="📷"
                                                 Command="{Binding DataContext.ShowPhotosCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 FontSize="14"
-                                                ToolTip="Ver fotos del pesaje"
                                                 Background="Transparent"
                                                 BorderThickness="0"
                                                 Cursor="Hand"
                                                 HorizontalAlignment="Center"
-                                                VerticalAlignment="Center" />
+                                                VerticalAlignment="Center">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="ToolTip" Value="Ver fotos del pesaje" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding PhotoPath}" Value="{x:Null}" />
+                                                                <Condition Binding="{Binding PhotoPathExit}" Value="{x:Null}" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Opacity" Value="0.25" />
+                                                            <Setter Property="ToolTip" Value="Este pesaje no tiene fotos" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
@@ -313,14 +469,20 @@
                     </ListView.View>
                 </ListView>
 
-                <TextBlock Text="Sin registros"
-                           Style="{StaticResource EmptyStateText}"
-                           Visibility="{Binding Records.Count, Converter={StaticResource EmptyToVis}}" />
+                <!-- Estado vacío con una salida clara -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                            Visibility="{Binding Records.Count, Converter={StaticResource EmptyToVis}}">
+                    <TextBlock Text="🔍" FontSize="40" HorizontalAlignment="Center" Opacity="0.5" />
+                    <TextBlock Text="Sin registros" Style="{StaticResource EmptyStateText}"
+                               HorizontalAlignment="Center" Margin="0,6,0,2" />
+                    <TextBlock Text="Pruebe con otros filtros o pulse «Limpiar filtros»."
+                               Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- PAGINATION -->
-        <Border Grid.Row="2" Style="{StaticResource CardPanel}" Padding="8,4">
+        <!-- PAGINACIÓN -->
+        <Border Grid.Row="3" Style="{StaticResource CardPanel}" Padding="12,8" Margin="0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -333,7 +495,7 @@
                                VerticalAlignment="Center"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                FontSize="13" Margin="0,0,16,0" />
-                    <TextBlock Text="Mostrar" VerticalAlignment="Center" FontSize="12"
+                    <TextBlock Text="Filas por página" VerticalAlignment="Center" FontSize="12"
                                Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" />
                     <ComboBox ItemsSource="{Binding PageSizeOptions}"
                               SelectedItem="{Binding PageSize}"
@@ -341,20 +503,17 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="&lt;&lt;"
-                            Command="{Binding GoToPageCommand}"
-                            CommandParameter="1"
+                    <Button Content="&lt;&lt;" ToolTip="Primera página"
+                            Command="{Binding GoToPageCommand}" CommandParameter="1"
                             IsEnabled="{Binding HasPreviousPage}"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="8,4" Margin="0,0,4,0" />
+                            Style="{StaticResource PageButton}" />
                     <Button Content="&lt; Anterior"
                             Command="{Binding PreviousPageCommand}"
                             IsEnabled="{Binding HasPreviousPage}"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="8,4" Margin="0,0,4,0" />
+                            Style="{StaticResource PageButton}" />
 
                     <!-- Números de página -->
-                    <ItemsControl ItemsSource="{Binding PageNumbers}" Margin="0,0,0,0">
+                    <ItemsControl ItemsSource="{Binding PageNumbers}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Horizontal" />
@@ -364,13 +523,14 @@
                             <DataTemplate>
                                 <Button Content="{Binding Text}"
                                         Command="{Binding DataContext.GoToPageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding Number}"
-                                        MinWidth="34" Padding="6,4" Margin="0,0,4,0">
+                                        CommandParameter="{Binding Number}">
                                     <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                                        <Style TargetType="Button" BasedOn="{StaticResource PageButton}">
+                                            <Setter Property="Background" Value="{StaticResource TextMutedBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource AccentGreenBrush}" />
+                                                    <Setter Property="Background" Value="{StaticResource AccentBlueBrush}" />
+                                                    <Setter Property="FontWeight" Value="Bold" />
                                                     <Setter Property="IsHitTestVisible" Value="False" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
@@ -389,14 +549,11 @@
                     <Button Content="Siguiente &gt;"
                             Command="{Binding NextPageCommand}"
                             IsEnabled="{Binding HasNextPage}"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="8,4" Margin="0,0,4,0" />
-                    <Button Content="&gt;&gt;"
-                            Command="{Binding GoToPageCommand}"
-                            CommandParameter="{Binding TotalPages}"
+                            Style="{StaticResource PageButton}" />
+                    <Button Content="&gt;&gt;" ToolTip="Última página"
+                            Command="{Binding GoToPageCommand}" CommandParameter="{Binding TotalPages}"
                             IsEnabled="{Binding HasNextPage}"
-                            Style="{StaticResource PrimaryButton}"
-                            Padding="8,4" />
+                            Style="{StaticResource PageButton}" Margin="0" />
                 </StackPanel>
             </Grid>
         </Border>
