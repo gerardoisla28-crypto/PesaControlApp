@@ -55,36 +55,11 @@
                         </Button.Style>
                     </Button>
 
-                    <Button Content="    Cámaras" Command="{Binding ShowCamerasCommand}">
-                        <Button.Style>
-                            <Style BasedOn="{StaticResource SidebarButton}" TargetType="Button">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentSection}" Value="Camaras">
-                                        <Setter Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-
                     <Button Content="    Registros" Command="{Binding ShowRegistrosCommand}">
                         <Button.Style>
                             <Style BasedOn="{StaticResource SidebarButton}" TargetType="Button">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding CurrentSection}" Value="Registros">
-                                        <Setter Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-
-                    <Button Content="    Control" Command="{Binding ShowControlsCommand}"
-                            Visibility="{Binding IsControlModuleEnabled, Converter={StaticResource BoolToVis}}">
-                        <Button.Style>
-                            <Style BasedOn="{StaticResource SidebarButton}" TargetType="Button">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentSection}" Value="Control">
                                         <Setter Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -118,12 +93,11 @@
                         </Button.Style>
                     </Button>
 
-                    <Button Content="    Configuración" Command="{Binding ShowSettingsCommand}"
-                            Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}">
+                    <Button Content="    Reportes" Command="{Binding ShowReportsCommand}">
                         <Button.Style>
                             <Style BasedOn="{StaticResource SidebarButton}" TargetType="Button">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentSection}" Value="Configuracion">
+                                    <DataTrigger Binding="{Binding CurrentSection}" Value="Reportes">
                                         <Setter Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -131,11 +105,12 @@
                         </Button.Style>
                     </Button>
 
-                    <Button Content="    Reportes" Command="{Binding ShowReportsCommand}">
+                    <Button Content="    Configuración" Command="{Binding ShowSettingsCommand}"
+                            Visibility="{Binding CanConfigure, Converter={StaticResource BoolToVis}}">
                         <Button.Style>
                             <Style BasedOn="{StaticResource SidebarButton}" TargetType="Button">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentSection}" Value="Reportes">
+                                    <DataTrigger Binding="{Binding CurrentSection}" Value="Configuracion">
                                         <Setter Property="Background" Value="{StaticResource SidebarItemSelectedBrush}" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -159,8 +134,9 @@
         </Border>
 
         <!-- MAIN CONTENT -->
-        <Border Grid.Column="1" Margin="15" CornerRadius="8"
-                Background="{StaticResource SurfaceCardBrush}">
+        <Border Grid.Column="1" Margin="15" Padding="20" CornerRadius="8"
+                Background="{StaticResource SurfaceCardBrush}"
+                BorderBrush="{StaticResource SurfaceLightBrush}" BorderThickness="1">
             <ContentControl Content="{Binding CurrentViewModel}" Focusable="False" />
         </Border>
     </Grid>

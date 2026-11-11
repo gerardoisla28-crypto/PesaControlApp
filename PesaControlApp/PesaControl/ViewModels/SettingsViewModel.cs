@@ -22,6 +22,11 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
     [ObservableProperty] private BackupViewModel? _backupVM;
     [ObservableProperty] private int _selectedTabIndex;
 
+    // Pestañas "Cámaras" y "Control": antes eran secciones del menú; ahora solo las ve quien entra a Configuración.
+    [ObservableProperty] private CameraViewModel? _cameraVM;
+    [ObservableProperty] private ControlsViewModel? _controlsVM;
+    [ObservableProperty] private bool _isControlModuleEnabled = true;
+
     public SettingsViewModel(DatabaseService db, ScaleManager? scaleManager = null, WeighingViewModel? weighingVm = null, ExportImportService? exportImport = null)
     {
         _db = db;
@@ -97,27 +102,30 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
 
     private const int ScalesTabIndex = 0;
     private const int NetworkTabIndex = 2;
+    private const int ControlTabIndex = 5;
 
     private bool IsTabDirty(int tab) => tab switch
     {
         ScalesTabIndex => ScaleDirty,
         StationTabIndex => StationCodeDirty,
         NetworkTabIndex => NetworkDirty,
+        ControlTabIndex => ControlsVM?.HasUnsavedChanges == true,
         _ => false
     };
 
-    private static string TabName(int tab) => tab switch
+    private string TabName(int tab) => tab switch
     {
         ScalesTabIndex => "Básculas",
         StationTabIndex => "Puesto",
         NetworkTabIndex => "Red",
+        ControlTabIndex => ControlsVM?.UnsavedChangesDescription ?? "Control",
         _ => ""
     };
 
-    public bool HasUnsavedChanges => IsTabDirty(ScalesTabIndex) || IsTabDirty(StationTabIndex) || IsTabDirty(NetworkTabIndex);
+    public bool HasUnsavedChanges => IsTabDirty(ScalesTabIndex) || IsTabDirty(StationTabIndex) || IsTabDirty(NetworkTabIndex) || IsTabDirty(ControlTabIndex);
 
     public string UnsavedChangesDescription
-        => string.Join(", ", new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex }.Where(IsTabDirty).Select(TabName));
+        => string.Join(", ", new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex, ControlTabIndex }.Where(IsTabDirty).Select(TabName));
 
     // Al guardar desde el aviso se valida primero; si falla, se queda en la pestaña con el error.
     private async Task<bool> SaveTabAsync(int tab)
@@ -132,6 +140,8 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             case ScalesTabIndex:
                 await SaveScaleAsync();
                 return !IsScaleEditorOpen;
+            case ControlTabIndex:
+                return ControlsVM is null || await ControlsVM.SaveChangesAsync();
             default:
                 return true;
         }
@@ -153,19 +163,22 @@ public partial class SettingsViewModel : ObservableObject, IUnsavedChanges
             case ScalesTabIndex:
                 if (IsScaleEditorOpen) CancelScaleEditor();
                 break;
+            case ControlTabIndex:
+                ControlsVM?.DiscardChanges();
+                break;
         }
     }
 
     public async Task<bool> SaveChangesAsync()
     {
-        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex }.Where(IsTabDirty))
+        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex, ControlTabIndex }.Where(IsTabDirty))
             if (!await SaveTabAsync(tab)) return false;
         return true;
     }
 
     public void DiscardChanges()
     {
-        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex })
+        foreach (var tab in new[] { ScalesTabIndex, StationTabIndex, NetworkTabIndex, ControlTabIndex })
             DiscardTab(tab);
     }
 

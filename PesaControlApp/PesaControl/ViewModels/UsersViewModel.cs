@@ -49,7 +49,23 @@ public partial class UsersViewModel : ObservableObject, IUnsavedChanges
     // A field's error disappears as soon as the user edits that field
     partial void OnEditUsernameChanged(string value) => UsernameError = "";
     partial void OnEditFullNameChanged(string value) => FullNameError = "";
-    partial void OnEditRoleChanged(string value) => RoleError = "";
+    partial void OnEditRoleChanged(string value)
+    {
+        RoleError = "";
+        OnPropertyChanged(nameof(RoleDescription));
+        OnPropertyChanged(nameof(PasswordRequirement));
+    }
+
+    public string RoleDescription => EditRole switch
+    {
+        UserRoles.SuperAdmin => "Acceso total, incluida la administración de administradores.",
+        UserRoles.Admin => "Gestiona usuarios, configuración y registros.",
+        UserRoles.Operator => "Realiza pesajes y administra registros.",
+        _ => ""
+    };
+
+    public string PasswordRequirement =>
+        $"Entre {PasswordPolicy.MinLength(EditRole)} y {PasswordPolicy.MaxLength} caracteres para el rol {UserRoles.DisplayName(EditRole)}.";
     partial void OnEditPasswordChanged(string value) => PasswordError = "";
     partial void OnEditPasswordConfirmChanged(string value) => PasswordConfirmError = "";
 

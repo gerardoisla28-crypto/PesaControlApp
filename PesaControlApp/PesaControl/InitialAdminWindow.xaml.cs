@@ -40,8 +40,8 @@ public partial class InitialAdminWindow : Window
             ? "" : "Las contraseñas no coinciden.";
 
         Control? firstInvalid =
-            UsernameError.Text != "" ? UsernameBox :
             FullNameError.Text != "" ? FullNameBox :
+            UsernameError.Text != "" ? UsernameBox :
             PasswordError.Text != "" ? PasswordBox :
             ConfirmPasswordError.Text != "" ? ConfirmPasswordBox : null;
         if (firstInvalid is not null)

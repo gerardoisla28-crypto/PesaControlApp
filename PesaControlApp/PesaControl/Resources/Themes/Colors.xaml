@@ -5,7 +5,7 @@
     <Color x:Key="SurfaceDark">#F3F4F6</Color>
     <Color x:Key="SurfaceMid">#E5E7EB</Color>
     <Color x:Key="SurfaceLight">#D1D5DB</Color>
-    <Color x:Key="SurfaceCard">#FFFFFF</Color>
+    <Color x:Key="SurfaceCard">#C5D4EB</Color>
 
     <!-- Text -->
     <Color x:Key="TextPrimary">#1F2937</Color>
@@ -21,7 +21,7 @@
     <Color x:Key="AccentAmber">#FFC107</Color>
 
     <!-- Sidebar -->
-    <Color x:Key="SidebarBg">#FFFFFF</Color>
+    <Color x:Key="SidebarBg">#C5D4EB</Color>
     <Color x:Key="SidebarItemHover">#E5E7EB</Color>
     <Color x:Key="SidebarItemActive">#90CAF9</Color>
     <Color x:Key="SidebarItemSelected">#BBDEFB</Color>

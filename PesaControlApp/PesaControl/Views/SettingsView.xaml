@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:views="clr-namespace:PesaControl.UI.Views.Controls"
+             xmlns:ui="clr-namespace:PesaControl.UI.Views"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Foreground="{StaticResource TextPrimaryBrush}">
@@ -431,6 +432,17 @@
             <!-- TAB: Respaldo -->
             <TabItem Header="Respaldo">
                 <views:BackupControl DataContext="{Binding BackupVM}" />
+            </TabItem>
+
+            <!-- TAB: Cámaras (antes una sección del menú, ahora solo para el administrador) -->
+            <TabItem Header="Cámaras">
+                <ui:CameraView DataContext="{Binding CameraVM}" />
+            </TabItem>
+
+            <!-- TAB: Control de acceso (barrera y semáforo) -->
+            <TabItem Header="Control"
+                     Visibility="{Binding IsControlModuleEnabled, Converter={StaticResource BoolToVis}}">
+                <ui:ControlsView DataContext="{Binding ControlsVM}" />
             </TabItem>
         </TabControl>
 

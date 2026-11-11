@@ -24,7 +24,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="300" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="350" MinWidth="280" />
+            <ColumnDefinition Width="350" MinWidth="280" MaxWidth="800" />
         </Grid.ColumnDefinitions>
 
         <!-- LEFT: User list -->
@@ -32,6 +32,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- Toolbar -->
@@ -43,14 +44,8 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Usuarios del Sistema" Style="{StaticResource SectionTitle}"
                                VerticalAlignment="Center" />
-                    <WrapPanel Grid.Column="1">
-                        <Button Content="Crear Usuario" Command="{Binding NewUserCommand}"
-                                Style="{StaticResource PrimaryButton}"
-                                Margin="0,0,6,0" />
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Style="{StaticResource StatusMessage}"
-                                   VerticalAlignment="Center" />
-                    </WrapPanel>
+                    <Button Grid.Column="1" Content="Crear Usuario" Command="{Binding NewUserCommand}"
+                            Style="{StaticResource PrimaryButton}" />
                 </Grid>
             </Border>
 
@@ -107,13 +102,46 @@
                                                    Foreground="{StaticResource TextSecondaryBrush}"
                                                    FontSize="12" />
                                     </StackPanel>
-                                    <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
-                                            Background="{StaticResource SurfaceLightBrush}"
-                                            VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Role, Converter={StaticResource RoleName}}"
-                                                   FontSize="11"
-                                                   Foreground="{StaticResource TextSecondaryBrush}" />
-                                    </Border>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+                                        <Border CornerRadius="10" Padding="8,2" Margin="0,0,6,0"
+                                                Background="{StaticResource SurfaceLightBrush}"
+                                                BorderBrush="{StaticResource AccentRedBrush}" BorderThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="Inactivo" FontSize="11"
+                                                       Foreground="{StaticResource AccentRedBrush}" />
+                                        </Border>
+                                        <Border CornerRadius="10" Padding="8,2"
+                                                Background="{StaticResource SurfaceLightBrush}">
+                                            <TextBlock Text="{Binding Role, Converter={StaticResource RoleName}}" FontSize="11" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Role}" Value="SuperAdmin">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Role}" Value="Admin">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentOrangeBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Role}" Value="Operator">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentBlueBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </StackPanel>
                                     <StackPanel Grid.Column="3" Orientation="Horizontal"
                                                 Margin="10,0,0,0" VerticalAlignment="Center">
                                         <Button Style="{StaticResource PrimaryButton}"
@@ -139,82 +167,218 @@
                 </ListBox>
             </Border>
 
+            <!-- Status bar -->
+            <Border Grid.Row="2" Margin="0,6,0,0" Padding="8,4">
+                <TextBlock Text="{Binding StatusMessage}"
+                           Style="{StaticResource StatusMessage}"
+                           VerticalAlignment="Center" />
+            </Border>
+
         </Grid>
 
-        <!-- SEPARATOR -->
-        <GridSplitter Grid.Column="1" Width="3" Margin="10,0"
+        <!-- SEPARATOR: arrastrar para cambiar el ancho del editor -->
+        <GridSplitter Grid.Column="1" Width="8" Margin="4,0"
                       Background="{StaticResource SurfaceLightBrush}"
+                      HorizontalAlignment="Center"
                       VerticalAlignment="Stretch"
-                      IsEnabled="{Binding IsEditorOpen}" />
+                      ResizeDirection="Columns"
+                      ResizeBehavior="PreviousAndNext"
+                      Cursor="SizeWE"
+                      ToolTip="Arrastre para ajustar el ancho"
+                      Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVis}}" />
 
         <!-- RIGHT: Editor panel -->
         <Border Grid.Column="2" Style="{StaticResource CardPanel}"
                 Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVis}}"
                 Margin="0,0,0,0">
-            <StackPanel>
-                <TextBlock>
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
-                            <Setter Property="Text" Value="Nuevo Usuario" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                    <Setter Property="Text" Value="Editar Usuario" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <Label Content="Nombre de usuario" Style="{StaticResource FormLabel}" />
-                <TextBox Text="{Binding EditUsername}" Margin="0,0,0,8" />
-                <TextBlock Text="{Binding UsernameError}" Style="{StaticResource FieldError}" />
+                <!-- Header -->
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="44" Height="44" CornerRadius="22"
+                            Background="{StaticResource AccentBlueBrush}"
+                            VerticalAlignment="Center">
+                        <materialDesign:PackIcon Width="24" Height="24"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"
+                                                 Foreground="White">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Kind" Value="AccountPlus" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                            <Setter Property="Kind" Value="AccountEdit" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
+                                    <Setter Property="Text" Value="Nuevo usuario" />
+                                    <Setter Property="Margin" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                            <Setter Property="Text" Value="Editar usuario" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                   Text="Los campos con * son obligatorios" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Command="{Binding CancelEditCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Width="32" Height="32" Padding="0"
+                            VerticalAlignment="Top" ToolTip="Cerrar">
+                        <materialDesign:PackIcon Kind="Close" Width="18" Height="18" />
+                    </Button>
+                </Grid>
 
-                <Label Content="Nombre completo" Style="{StaticResource FormLabel}" />
-                <TextBox Text="{Binding EditFullName}" Margin="0,0,0,8" />
-                <TextBlock Text="{Binding FullNameError}" Style="{StaticResource FieldError}" />
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,6,0">
 
-                <Label Content="Rol" Style="{StaticResource FormLabel}" />
-                <ComboBox ItemsSource="{Binding Roles}"
-                          SelectedItem="{Binding EditRole}"
-                          Margin="0,0,0,8">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Converter={StaticResource RoleName}}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <TextBlock Text="{Binding RoleError}" Style="{StaticResource FieldError}" />
+                        <!-- Account section -->
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                            <materialDesign:PackIcon Kind="AccountOutline" Width="16" Height="16"
+                                                     Foreground="{StaticResource AccentBlueBrush}"
+                                                     VerticalAlignment="Center" />
+                            <TextBlock Text="CUENTA" FontSize="11" FontWeight="Bold" Margin="6,0,0,0"
+                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
 
-                <Label Content="Contraseña" Style="{StaticResource FormLabel}" />
-                <TextBlock Text="Al editar, dejar vacío para mantener la contraseña actual."
-                           FontSize="11" Margin="0,-2,0,4" TextWrapping="Wrap"
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
-                <PasswordBox x:Name="PasswordInput" Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
-                             Style="{StaticResource MaterialDesignRevealPasswordBox}"
-                             ToolTip="Entre 14 y 128 caracteres para SuperAdmin y Admin; entre 8 y 128 para Operator y Viewer. Dejar vacío para mantener la actual al editar." />
-                <TextBlock Text="{Binding PasswordError}" Style="{StaticResource FieldError}" />
+                        <Label Content="Nombre *" Style="{StaticResource FormLabel}" />
+                        <TextBox Text="{Binding EditFullName, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding FullNameError}" Style="{StaticResource FieldError}" />
 
-                <Label Content="Confirmar contraseña" Style="{StaticResource FormLabel}" />
-                <PasswordBox x:Name="ConfirmPasswordInput" Margin="0,0,0,8" PasswordChanged="ConfirmPasswordBox_OnPasswordChanged"
-                             Style="{StaticResource MaterialDesignRevealPasswordBox}"
-                             ToolTip="Repita la contraseña." />
-                <TextBlock Text="{Binding PasswordConfirmError}" Style="{StaticResource FieldError}" />
+                        <Label Content="Usuario *" Style="{StaticResource FormLabel}" />
+                        <TextBox Text="{Binding EditUsername, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding UsernameError}" Style="{StaticResource FieldError}" />
 
-                <CheckBox Content="Usuario activo"
-                          IsChecked="{Binding EditIsActive}"
-                          Margin="0,0,0,16"
-                          Foreground="{StaticResource TextPrimaryBrush}" />
+                        <Label Content="Rol *" Style="{StaticResource FormLabel}" />
+                        <ComboBox ItemsSource="{Binding Roles}"
+                                  SelectedItem="{Binding EditRole}"
+                                  Margin="0,0,0,4">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource RoleName}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Text="{Binding RoleDescription}"
+                                   FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding RoleError}" Style="{StaticResource FieldError}" />
 
-                <WrapPanel>
+                        <Separator Margin="0,8,0,12" Background="{StaticResource SurfaceLightBrush}" />
+
+                        <!-- Security section -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <materialDesign:PackIcon Kind="ShieldLockOutline" Width="16" Height="16"
+                                                     Foreground="{StaticResource AccentBlueBrush}"
+                                                     VerticalAlignment="Center" />
+                            <TextBlock Text="SEGURIDAD" FontSize="11" FontWeight="Bold" Margin="6,0,0,0"
+                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+
+                        <Border CornerRadius="4" Padding="8,6" Margin="0,0,0,8"
+                                Background="{StaticResource SurfaceMidBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="InformationOutline" Width="14" Height="14"
+                                                         Foreground="{StaticResource AccentTealBrush}"
+                                                         VerticalAlignment="Top" Margin="0,1,6,0" />
+                                <TextBlock Text="{Binding PasswordRequirement}"
+                                           FontSize="11" TextWrapping="Wrap" MaxWidth="270"
+                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Label Style="{StaticResource FormLabel}">
+                            <Label.Content>
+                                <TextBlock>
+                                    <Run Text="Contraseña" />
+                                    <Run Text=" *">
+                                        <Run.Style>
+                                            <Style TargetType="Run">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding DataContext.IsEditing, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                        <Setter Property="Text" Value="" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Run.Style>
+                                    </Run>
+                                </TextBlock>
+                            </Label.Content>
+                        </Label>
+                        <TextBlock Text="Déjela vacía para mantener la contraseña actual."
+                                   FontSize="11" Margin="0,-2,0,4" TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
+                        <PasswordBox x:Name="PasswordInput" Margin="0,0,0,8" PasswordChanged="PasswordBox_OnPasswordChanged"
+                                     Style="{StaticResource MaterialDesignRevealPasswordBox}"
+                                     ToolTip="{Binding PasswordRequirement}" />
+                        <TextBlock Text="{Binding PasswordError}" Style="{StaticResource FieldError}" />
+
+                        <Label Content="Confirmar contraseña" Style="{StaticResource FormLabel}" />
+                        <PasswordBox x:Name="ConfirmPasswordInput" Margin="0,0,0,8" PasswordChanged="ConfirmPasswordBox_OnPasswordChanged"
+                                     Style="{StaticResource MaterialDesignRevealPasswordBox}"
+                                     ToolTip="Repita la contraseña." />
+                        <TextBlock Text="{Binding PasswordConfirmError}" Style="{StaticResource FieldError}" />
+
+                        <Separator Margin="0,8,0,12" Background="{StaticResource SurfaceLightBrush}" />
+
+                        <!-- Status -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Usuario activo" FontWeight="SemiBold" />
+                                <TextBlock Text="Un usuario inactivo no puede iniciar sesión."
+                                           FontSize="11" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" IsChecked="{Binding EditIsActive}"
+                                          Style="{StaticResource MaterialDesignSwitchToggleButton}"
+                                          VerticalAlignment="Center" Margin="12,0,0,0" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Actions (always visible) -->
+                <Grid Grid.Row="2" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <Button Content="Guardar" Command="{Binding SaveUserCommand}"
                             Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,6,0" Padding="20,10" />
-                    <Button Content="Cancelar" Command="{Binding CancelEditCommand}"
-                            Style="{StaticResource DangerButton}"
-                            Padding="20,10" />
-                </WrapPanel>
-            </StackPanel>
+                            Margin="0,0,8,0" Padding="20,10" />
+                    <Button Grid.Column="1" Content="Cancelar" Command="{Binding CancelEditCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Padding="20,10" Height="Auto" />
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
