@@ -196,7 +196,7 @@ public partial class RegistrosViewModel : ObservableObject
             if (fullRecord == null) return;
 
             var configs = await new Repository<SystemConfig>(ctx).GetAllAsync();
-            var header = configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PesaControl";
+            var header = configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PESACONTROL PRO";
             var template = new TicketTemplate { Header = header };
 
             var dlg = new PrintDialog();

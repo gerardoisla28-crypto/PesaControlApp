@@ -111,7 +111,7 @@ public partial class DashboardWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"No se pudo cerrar la ventana: {ex.Message}", "PesaControl", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"No se pudo cerrar la ventana: {ex.Message}", "PesaControl Pro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         });
     }

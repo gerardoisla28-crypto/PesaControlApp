@@ -75,7 +75,7 @@ public partial class RegistroDetailPopup : Window
         if (dlg.ShowDialog() == true)
         {
             var printer = new WindowsPrinter(dlg.PrintQueue.Name);
-            _ = printer.PrintAsync(Record, new TicketTemplate { Header = "PesaControl" });
+            _ = printer.PrintAsync(Record, new TicketTemplate { Header = "PESACONTROL PRO" });
         }
     }
 

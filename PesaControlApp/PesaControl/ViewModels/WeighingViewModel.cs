@@ -625,11 +625,11 @@ public partial class WeighingViewModel : ObservableObject
 
     private async Task<string> LoadReceivingCompanyAsync()
     {
-        if (_dbService == null) return "PesaControl";
+        if (_dbService == null) return "PESACONTROL PRO";
         using var ctx = _dbService.CreateContext();
         var repo = new Repository<SystemConfig>(ctx);
         var configs = await repo.GetAllAsync();
-        return configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PesaControl";
+        return configs.FirstOrDefault(c => c.Key == "receiving_company")?.Value ?? "PESACONTROL PRO";
     }
 
     [RelayCommand]

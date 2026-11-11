@@ -29,7 +29,7 @@
             <StackPanel Margin="0,6,0,20" HorizontalAlignment="Center">
                 <Image Source="Assets/product-tile.png" Width="140" Height="140"
                        HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="PESA CONTROL" FontSize="22" FontWeight="Bold"
+                <TextBlock Text="PESACONTROL PRO" FontSize="22" FontWeight="Bold"
                            HorizontalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,10,0,0" />
                 <TextBlock Text="Iniciar Sesión" FontSize="13"
                            Foreground="{StaticResource TextSecondaryBrush}"
